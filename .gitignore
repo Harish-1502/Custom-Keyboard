@@ -1,0 +1,4 @@
+.env
+.env.*
+
+macro-controller-firebase-adminsdk-*.json
