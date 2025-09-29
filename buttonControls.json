@@ -1,28 +1,57 @@
 {
-  "computer": {
-    "BTN:1": {
-      "keys": [
-        "ctrl",
-        "y"
-      ]
+  "activeProfile": "computer",
+  "profiles": {
+    "computer": {
+      "BTN:1": {
+        "keys": [
+          "ctrl",
+          "y"
+        ]
+      },
+      "BTN:2": {
+        "keys": [
+          "ctrl",
+          "f"
+        ]
+      },
+      "BTN:3": {
+        "keys": [
+          "ctrl",
+          "c"
+        ]
+      },
+      "BTN:4": {
+        "keys": [
+          "ctrl",
+          "end"
+        ]
+      }
     },
-    "BTN:2": {
-      "keys": [
-        "ctrl",
-        "f"
-      ]
-    },
-    "BTN:3": {
-      "keys": [
-        "ctrl",
-        "r"
-      ]
-    },
-    "BTN:4": {
-      "keys": [
-        "ctrl",
-        "home"
-      ]
+    "default": {
+      "BTN:1": {
+        "keys": [
+          "ctrl",
+          "y"
+        ]
+      },
+      "BTN:2": {
+        "keys": [
+          "ctrl",
+          "f"
+        ]
+      },
+      "BTN:3": {
+        "keys": [
+          "ctrl",
+          "r"
+        ]
+      },
+      "BTN:4": {
+        "keys": [
+          "ctrl",
+          "home"
+        ]
+      }
     }
   }
 }
