@@ -1,11 +1,6 @@
-import asyncio
 import json
-import pyautogui
-import firebase_admin
-import pystray
 import webbrowser
 import os
-import keyboard
 import threading
 import array
 
@@ -13,10 +8,12 @@ from PIL import Image
 from firebase_admin import credentials, db
 from bleak import BleakClient
 from dotenv import load_dotenv
+from config_store import load_prev_state
 
 load_dotenv()
 address = os.getenv("ADDRESS")
 char_uuid = os.getenv("CHAR_UUID")
+cred = os.getenv("CRED")
 
 if not address:
     raise RuntimeError("Missing ADDRESS env var (BLE MAC). Set ADDRESS=AA:BB:CC:DD:EE:FF")
@@ -24,28 +21,26 @@ if not char_uuid:
     raise RuntimeError("Missing CHAR_UUID env var (notify characteristic UUID).")
 
 config = {}
-cred = credentials.Certificate("./macro-controller-firebase-adminsdk-fbsvc-744d7fc317.json")
-image = Image.open("./controller.png")
+cred = credentials.Certificate(cred)
+image = Image.open("./assets/controller.png")
 config_list = ["default","computer"]
 FILE_LOCK = threading.RLock()
 BLE_TASK = None
 LOOP = None
 
-# Load the active profile before closing the program
-def load_prev_state():
-    with FILE_LOCK:
-        with open("buttonControls.json", "r") as f:
-            temp_config = json.load(f)
-    return temp_config.get("activeProfile")
-
+# Loading previous state from shutdown
 active_profile = load_prev_state()
-# print("activeProfile from recall function: ", active_profile) ----DEBUG
+
+# DEBUG
+# print("activeProfile from recall function: ", active_profile) 
+
 # Getting the array index from the array that the active profile is in
 for index,config in enumerate(config_list):
     if active_profile == config:
         array_index = index
         # print("Array index: ",array_index) 
 
+# DEBUG
 # active_profile = db.reference().get("activeProfile")
 # print("Active Profile: ",active_profile)
 
@@ -78,6 +73,7 @@ def partial_reload_from_db(active_profile: str):
         except Exception as e:
             print("Failed to reload config:", e)
         
+        # DEBUG
         # print(full_data)
         local_path = ["profiles", active_profile]
         
@@ -87,6 +83,7 @@ def partial_reload_from_db(active_profile: str):
         
         current_branch[local_path[-1]] = new_subtree
         
+        # DEBUG
         # print("Full data: ",full_data)
         
         with open("buttonControls.json","w") as f:
@@ -104,8 +101,7 @@ def connecting_to_db():
         # Listens for changes in a specific profile
         db.reference(f"profiles/{active_profile}").listen(listener)    
     except BaseException:
-        print("Can't connect to DB. Try again later")
-    
+        print("Can't connect to DB. Try again later")   
 
 # Handles real-time database changes in the json and then it calls the full_reload function when a change occurs
 def listener(event):
@@ -121,7 +117,6 @@ def listener(event):
             print("Failed to update config from full reload:", e)     
     else:
         print("Listening function failed")
-
      
 # Reads buttonControls.json, gets the button_id and profile, finds the action and executes it
 def trigger_macro(button_id, profile):
@@ -203,7 +198,6 @@ def tray_disconnect(*_):
     print("Disconnecting from the device")
     LOOP.call_soon_threadsafe(stop_ble_session)
 
-
 # Goes to the database website
 def open_website(icon, item):
     webbrowser.open("https://macro-controller-default-rtdb.firebaseio.com/")
@@ -240,6 +234,7 @@ def change_profile(step):
 # Increment the active profile in the config list array
 def increment_array_index(*_):
     change_profile(1)
+    
 # Creates all the right-click actions on the icon
 menu = pystray.Menu(
     pystray.MenuItem("Open DB", open_website),
@@ -249,6 +244,7 @@ menu = pystray.Menu(
     pystray.MenuItem("Disconnect BLE", tray_disconnect),
     pystray.MenuItem("Exit", exit_app)
 )
+
 # Creates the icon on the tray menu
 icon = pystray.Icon("MacroPad", image, "Macro Controller", menu)
 

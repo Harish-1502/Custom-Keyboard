@@ -1,4 +1,11 @@
 .env
 .env.*
 
-macro-controller-firebase-adminsdk-*.json
+macro-controller-firebase-adminsdk-fbsvc-744d7fc317.json
+
+desktop/venv/
+
+firmware/
+.vscode/
+
+docs/
