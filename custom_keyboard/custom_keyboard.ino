@@ -7,7 +7,7 @@
 #define CHARACTERISTIC_UUID "8acc4aaf-26b1-44a9-8b83-2d94ce03f34a"
 
 // Initialize variables
-int buttons[4] = {18,19,14,3};
+int buttons[4] = {18,19,14,13};
 volatile bool changeMode = false;
 volatile unsigned long prev_time = 0;
 volatile unsigned long wait_time = 0;
@@ -25,6 +25,7 @@ class MyServerCallbacks : public BLEServerCallbacks {
   void onDisconnect(BLEServer* pServer) {
     connected = false;
     Serial.println("Client disconnected");
+    // delay(200);
     // Restart advertising so clients can reconnect
     BLEDevice::startAdvertising();  
   }
@@ -36,8 +37,9 @@ void setup()
 
   // Standard setup for BLE taken from the example
   // Used to setup BLE
-  BLEDevice::init("Long name works now");
+  BLEDevice::init("Macropad");
   BLEServer *pServer = BLEDevice::createServer();
+  pServer->setCallbacks(new MyServerCallbacks());
   BLEService *pService = pServer->createService(SERVICE_UUID);
   pCharacteristic = pService->createCharacteristic(CHARACTERISTIC_UUID, 
   BLECharacteristic::PROPERTY_NOTIFY | BLECharacteristic::PROPERTY_READ);
@@ -52,8 +54,8 @@ void setup()
   pAdvertising->setMinPreferred(0x12);
   BLEDevice::startAdvertising();
   Serial.println("Characteristic defined! Now you can read it in your phone!");
-
-  pServer->setCallbacks(new MyServerCallbacks());
+  
+  // pServer->setCallbacks(new MyServerCallbacks());
   // Setup buttons
   for(int i=0;i<4;i++){
     pinMode(buttons[i], INPUT_PULLUP);
@@ -67,6 +69,7 @@ void loop()
     if((digitalRead(18) == HIGH) &&
     (digitalRead(19) == HIGH) &&
     (digitalRead(14) == HIGH) &&
+    (digitalRead(13) == HIGH) &&
     (changeMode == false) && (millis() - wait_time > 3000)){
       if(!sleepAnnounced){ 
         Serial.println("Enter sleep");
@@ -76,19 +79,21 @@ void loop()
       sleepAnnounced = false;
     } 
       // Runs the keyboard code (active phase)
-      computerModeSelected();
+      keyboard();
   }
+
+  delay(5);
 }
 
 // Loops through all the buttons and checks if any are pressed.
 // When they are pressed, it sends a BLE message saying which button was pressed
-void computerModeSelected(){
+void keyboard(){
   for(int i = 0; i < 4 ; i++){
     // Check is the button is pressed
     if(digitalRead(buttons[i]) == LOW){
       // Wait for which button will be pressed
       switch(buttons[i]){
-        case 3:
+        case 13:
           pCharacteristic->setValue("BTN:1");
           pCharacteristic->notify();
           // Serial.println("BTN:1");  //DEBUG
