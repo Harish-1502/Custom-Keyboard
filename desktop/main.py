@@ -10,11 +10,16 @@ import keyboard
 import threading
 import array
 
+
 from PIL import Image
 from firebase_admin import credentials, db
 from bleak import BleakClient, BleakScanner
 from dotenv import load_dotenv
-# from config_store import load_prev_state
+from pathlib import Path
+
+from config_store import load_prev_state
+from cloud import full_reload_from_db, partial_reload_from_db, make_listener, connecting_to_db
+from ble_client import verify_char_uuid, find_device_address_by_name, connect,trigger_macro
 
 load_dotenv()
 address = os.getenv("ADDRESS")
@@ -31,20 +36,16 @@ config = {}
 cred = credentials.Certificate(cred)
 image = Image.open("./assets/controller.png")
 config_list = ["default","computer"]
+BASE_DIR = Path(__file__).resolve().parent
+CONFIG_PATH = BASE_DIR / 'config/buttonControls.json'
 FILE_LOCK = threading.RLock()
 BLE_TASK: asyncio.Task | None = None
 BLE_CLIENT: BleakClient | None = None
 BLE_STOP_EVENT: asyncio.Event | None = None
 LOOP = None
 
-def load_prev_state():
-    with FILE_LOCK:
-        with open("./desktop/buttonControls.json", "r") as f:
-            temp_config = json.load(f)
-    return temp_config.get("activeProfile")
-
 # Loading previous state from shutdown
-active_profile = load_prev_state()
+active_profile = load_prev_state(FILE_LOCK) or "default"
 
 # DEBUG
 # print("activeProfile from recall function: ", active_profile) 
@@ -66,189 +67,6 @@ def exit_app(icon, item):
         LOOP.call_soon_threadsafe(LOOP.stop)
     os._exit(0)
 
-#  Replaces the current json file in the project with the json from the database
-def full_reload_from_db():
-    full_data = db.reference().get()
-    # print("Full data: ",full_data)
-    with FILE_LOCK:
-        try:
-            with open("buttonControls.json","w") as f:
-                json.dump(full_data, f, indent = 2)
-        except Exception as e:
-            print("Failed to reload config:", e)
-
-# Loads only part of the json file. It's used in the listener function to copy changes in the DB only related to the active profile's macros 
-def partial_reload_from_db(active_profile: str):
-    new_subtree = db.reference(f"profiles/{active_profile}").get()
-    # print("SubTree: ",sub_tree)
-    with FILE_LOCK:
-        try:
-            with open("buttonControls.json","r") as f:
-                full_data = json.load(f) or {}
-        except Exception as e:
-            print("Failed to reload config:", e)
-        
-        # DEBUG
-        # print(full_data)
-        local_path = ["profiles", active_profile]
-        
-        current_branch = full_data
-        for step in local_path[:-1]:
-            current_branch = current_branch[step]
-        
-        current_branch[local_path[-1]] = new_subtree
-        
-        # DEBUG
-        # print("Full data: ",full_data)
-        
-        with open("buttonControls.json","w") as f:
-            json.dump(full_data, f, indent = 2)
-        
-# Connects to firebase database
-def connecting_to_db():
-    try:
-        firebase_admin.initialize_app(cred,{
-            "databaseURL" : "https://macro-controller-default-rtdb.firebaseio.com/"
-        })
-        full_reload_from_db()
-        # Easier to debug partial from here
-        # partial_reload_from_db(active_profile)
-        # Listens for changes in a specific profile
-        db.reference(f"profiles/{active_profile}").listen(listener)    
-    except BaseException:
-        print("Can't connect to DB. Try again later")   
-
-# Handles real-time database changes in the json and then it calls the full_reload function when a change occurs
-def listener(event):
-    print("Listening function is called")
-    # print("Raw event: ",event)
-    data = event.data
-    # print("Processed event: ",data)
-    if(data):
-        try:
-            print("Writing from database into json file")
-            partial_reload_from_db(active_profile)
-        except Exception as e:
-            print("Failed to update config from full reload:", e)     
-    else:
-        print("Listening function failed")
-     
-# Reads buttonControls.json, gets the button_id and profile, finds the action and executes it
-def trigger_macro(button_id, profile):
-    with FILE_LOCK:
-        with open("buttonControls.json", "r") as f:
-            config_file = json.load(f)
-    action = config_file.get("profiles",{}).get(profile).get(button_id)
-    print(action)
-    if action:
-        keys = action.get("keys")
-        if keys:
-            print(f"Triggering {button_id}: printing {keys}")
-            pyautogui.hotkey(*keys)
-        else:
-            print("keys is undefined")
-    else:
-        print("No action was mapped for this button")
-
-#Verifies if there is a characteristic uuid and what properties it has so it prevents the "it's connected but nothing happens" error 
-async def verify_char_uuid(client, char_uuid: str):
-    service = client.services or await client.get_services()
-    ch_uuid = service.get_characteristic(char_uuid)
-    if not ch_uuid:
-        raise RuntimeError(f"Characteristic {char_uuid} not found on device.")
-
-    props = getattr(ch_uuid, "properties", []) or []
-    if "notify" not in props:
-        raise RuntimeError(f"Characteristic {char_uuid} is not notifiable. Props: {props}")
-
-    print(f"GATT OK → found {char_uuid} with properties {props}")
-    
-async def find_device_address_by_name(name: str, timeout: float = 8.0) -> str:
-    devices = await BleakScanner.discover(timeout=timeout)
-    for d in devices:
-        if (d.name or "").strip() == name:
-            return d.address
-    raise RuntimeError(f"Device '{name}' not found in scan.")
-            
-# Gets the button ID and activates the trigger_macro function
-def handle_notification(sender,data):
-    msg = data.decode("utf-8").strip()
-    print(f"Received {msg}")
-    trigger_macro(msg,active_profile)
-
-# Used to initiate the device connection and BLE connection
-async def connect(device_name:str, char_uuid:str):
-    
-    global BLE_CLIENT, BLE_STOP_EVENT, BLE_TASK
-    
-    BLE_STOP_EVENT = asyncio.Event()
-    
-    try:
-        address = await find_device_address_by_name(device_name, timeout=8.0)
-        print(f"Connecting to {address} ...")
-        
-        client = BleakClient(address, timeout=20.0)
-        
-        BLE_CLIENT = client
-        
-        disc = asyncio.Event()
-        client.set_disconnected_callback(lambda _: disc.set())
-        
-        await client.connect()
-        print("Connected to ESP32 Macro Pad!")
-        
-        await verify_char_uuid(client, char_uuid)
-        await client.start_notify(char_uuid, handle_notification)
-        print("Listening for notifications...")
-        
-        # await asyncio.wait(
-        #     [disc.wait(), BLE_STOP_EVENT.wait()],
-        #     return_when=asyncio.FIRST_COMPLETED,
-        # )
-        disc_task = asyncio.create_task(disc.wait())
-        stop_task = asyncio.create_task(BLE_STOP_EVENT.wait())
-        
-        done, pending = await asyncio.wait(
-            [disc_task, stop_task],
-            return_when=asyncio.FIRST_COMPLETED,
-        )
-        
-        for task in pending:
-            task.cancel()
-            
-        
-    except Exception as e:
-        print("BLE session error:", e)
-        
-    finally:        
-        if BLE_CLIENT:
-            if BLE_CLIENT.is_connected:
-                try:
-                    await BLE_CLIENT.stop_notify(char_uuid)
-                except Exception as e:
-                    print("Failed to stop notify:", e)
-                await BLE_CLIENT.disconnect()
-        
-        BLE_CLIENT = None
-        BLE_STOP_EVENT = None
-        BLE_TASK = None
-        print("BLE disconnected (session ended).")
-        
-    #     async with BleakClient(address, timeout = 20.0) as client:
-    #         print("Connected to ESP32 Macro Pad!")
-    #         await verify_char_uuid(client, char_uuid)
-            
-    #         await client.start_notify(char_uuid, handle_notification)
-    #         print("Listening for notifications...")
-            
-    #         # await asyncio.sleep(99999)  # Keeps the program running
-    #         disc = asyncio.Event()
-    #         client.set_disconnected_callback(lambda _: disc.set())
-    #         await disc.wait()
-    #         print("BLE disconnected (session ended).")
-    # except Exception as e:
-    #     print("BLE session error:", e)
-
 # Helper function to do connect 
 def start_ble_session():
     global BLE_TASK
@@ -258,7 +76,7 @@ def start_ble_session():
     
     async def connect_wrapper():
         await asyncio.sleep(0.5)
-        await connect(name, char_uuid)
+        await connect(name, char_uuid, BLE_CLIENT, BLE_STOP_EVENT, BLE_TASK, active_profile, FILE_LOCK)
 
     BLE_TASK = LOOP.create_task(connect_wrapper())
     return BLE_TASK
@@ -294,14 +112,14 @@ def open_website(icon, item):
 def set_active_profile(new_profile: str):
     with FILE_LOCK:
         try:
-            with open("./buttonControls.json","r",encoding="utf-8") as f:
+            with CONFIG_PATH.open("r", encoding="utf-8") as f:
                 data = json.load(f)
         except FileNotFoundError:
             data = {}
     
         data["activeProfile"] = new_profile
         
-        with open("./buttonControls.json","w",encoding="utf-8") as f:
+        with CONFIG_PATH.open("w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
     
     db.reference("/").update({f"activeProfile": new_profile})
@@ -317,7 +135,7 @@ def change_profile(step):
     active_profile = config_list[array_index]
     print(f"currently in {active_profile} mode")
     set_active_profile(active_profile)
-    db.reference(f"profiles/{active_profile}").listen(listener)    
+    db.reference(f"profiles/{active_profile}").listen(make_listener(active_profile, FILE_LOCK))
 
 # Increment the active profile in the config list array
 def increment_array_index(*_):
@@ -353,6 +171,6 @@ def run_event_loop_forever():
         )
         LOOP.close()                         # 8) close the loop cleanly
         
-connecting_to_db()
+connecting_to_db(active_profile,FILE_LOCK)
 threading.Thread(target=icon.run, daemon=True).start()
 run_event_loop_forever()
