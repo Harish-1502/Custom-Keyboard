@@ -109,6 +109,7 @@ def make_notification_handler(active_profile, FILE_LOCK: RLock):
     def notification(sender, data):   
         msg = data.decode("utf-8").strip()
         print(f"Received {msg}")
+        print(f"Active Profile; {active_profile}")
         trigger_macro(msg,active_profile, FILE_LOCK)
     return notification
 
