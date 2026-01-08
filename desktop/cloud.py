@@ -15,7 +15,7 @@ cred = credentials.Certificate(cred)
 
 # Connects to firebase database
 def connecting_to_db(active_profile: str, FILE_LOCK: RLock):
-    print("Calling from cloud.py connecting_to_db")
+    # print("Calling from cloud.py connecting_to_db")
     try:
         firebase_admin.initialize_app(cred,{
             "databaseURL" : "https://macro-controller-default-rtdb.firebaseio.com/"
@@ -42,7 +42,7 @@ def make_listener(active_profile: str, FILE_LOCK: RLock):
 #  Replaces the current json file in the project with the json from the database
 def full_reload_from_db(FILE_LOCK: RLock):
     full_data = db.reference().get()
-    print("Called from cloud.py full reload")
+    # print("Called from cloud.py full reload")
     # print("Full data: ",full_data)
     with FILE_LOCK:
         try:
@@ -55,7 +55,7 @@ def full_reload_from_db(FILE_LOCK: RLock):
 def partial_reload_from_db(active_profile: str, FILE_LOCK: RLock):
     new_subtree = db.reference(f"profiles/{active_profile}").get()
     # print("SubTree: ",sub_tree)
-    print("Called from cloud.py partial reload")
+    # print("Called from cloud.py partial reload")
     with FILE_LOCK:
         try:
             with CONFIG_PATH.open("r", encoding="utf-8") as f:

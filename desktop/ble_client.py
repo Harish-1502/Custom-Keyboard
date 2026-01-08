@@ -7,6 +7,9 @@ import pyautogui
 from paths import CONFIG_PATH
 from threading import RLock
 
+BLE_TASK: asyncio.Task | None = None
+BLE_CLIENT: BleakClient | None = None
+BLE_STOP_EVENT: asyncio.Event | None = None
 
 load_dotenv()
 
@@ -29,7 +32,7 @@ async def verify_char_uuid(client, char_uuid: str):
     if "notify" not in props:
         raise RuntimeError(f"Characteristic {char_uuid} is not notifiable. Props: {props}")
 
-    print(f"GATT OK → found {char_uuid} with properties {props}")
+    print(f"GATT OK -> found {char_uuid} with properties {props}")
     
 async def find_device_address_by_name(name: str, timeout: float = 8.0) -> str:
     devices = await BleakScanner.discover(timeout=timeout)
@@ -39,9 +42,9 @@ async def find_device_address_by_name(name: str, timeout: float = 8.0) -> str:
     raise RuntimeError(f"Device '{name}' not found in scan.")
 
 # Used to initiate the device connection and BLE connection
-async def connect(device_name:str, char_uuid:str, BLE_CLIENT: BleakClient | None, BLE_STOP_EVENT: asyncio.Event | None, BLE_TASK: asyncio.Task | None, active_profile, FILE_LOCK: RLock):
+async def connect(device_name:str, char_uuid:str, state, FILE_LOCK: RLock):
     
-    # global BLE_CLIENT, BLE_STOP_EVENT, BLE_TASK
+    global BLE_CLIENT, BLE_STOP_EVENT, BLE_TASK
     
     BLE_STOP_EVENT = asyncio.Event()
     
@@ -49,12 +52,20 @@ async def connect(device_name:str, char_uuid:str, BLE_CLIENT: BleakClient | None
         address = await find_device_address_by_name(device_name, timeout=8.0)
         print(f"Connecting to {address} ...")
         
-        client = BleakClient(address, timeout=20.0)
+        # client = BleakClient(address, timeout=20.0)
         
-        BLE_CLIENT = client
+        # BLE_CLIENT = client
         
+        # client.set_disconnected_callback(lambda _: disc.set())
         disc = asyncio.Event()
-        client.set_disconnected_callback(lambda _: disc.set())
+
+        def on_disconnect(_client):
+            print("Device disconnected.")
+            disc.set()
+
+        client = BleakClient(address, timeout=20.0, disconnected_callback=on_disconnect)
+        BLE_CLIENT = client
+
         
         await client.connect()
         print("Connected to ESP32 Macro Pad!")
@@ -71,7 +82,7 @@ async def connect(device_name:str, char_uuid:str, BLE_CLIENT: BleakClient | None
                     raise
                 print(f"GATT not ready yet (attempt {attempt}): {e}")
                 await asyncio.sleep(0.8)
-        handler = make_notification_handler(active_profile, FILE_LOCK)
+        handler = make_notification_handler(state, FILE_LOCK)
         await client.start_notify(char_uuid, handler)
         print("Listening for notifications...")
         
@@ -105,12 +116,12 @@ async def connect(device_name:str, char_uuid:str, BLE_CLIENT: BleakClient | None
         print("BLE disconnected (session ended).")
         
 # Gets the button ID and activates the trigger_macro function
-def make_notification_handler(active_profile, FILE_LOCK: RLock):
+def make_notification_handler(state, FILE_LOCK: RLock):
     def notification(sender, data):   
         msg = data.decode("utf-8").strip()
         print(f"Received {msg}")
-        print(f"Active Profile; {active_profile}")
-        trigger_macro(msg,active_profile, FILE_LOCK)
+        print(f"Active Profile; {state['activeProfile']}")
+        trigger_macro(msg,state["activeProfile"], FILE_LOCK)
     return notification
 
 # Reads buttonControls.json, gets the button_id and profile, finds the action and executes it
@@ -131,22 +142,22 @@ def trigger_macro(button_id, profile, FILE_LOCK):
         print("No action was mapped for this button")
         
 # Helper function to do connect 
-def start_ble_session(BLE_TASK: asyncio.Task | None, LOOP, BLE_CLIENT: BleakClient | None, BLE_STOP_EVENT: asyncio.Event | None, active_profile, FILE_LOCK: RLock):
-    # global BLE_TASK
+def start_ble_session(name, FILE_LOCK: RLock, state, LOOP):
+    global BLE_TASK
     if BLE_TASK and not BLE_TASK.done():
         print("BLE session already running.")
         return BLE_TASK
     
     async def connect_wrapper():
         await asyncio.sleep(0.5)
-        await connect(name, char_uuid, BLE_CLIENT, BLE_STOP_EVENT, BLE_TASK, active_profile, FILE_LOCK)
+        await connect(name, char_uuid, state, FILE_LOCK)
 
     BLE_TASK = LOOP.create_task(connect_wrapper())
     return BLE_TASK
 
 # Helper function to disconnect 
-def stop_ble_session(BLE_TASK: asyncio.Task | None, BLE_STOP_EVENT: asyncio.Event | None):
-    # global BLE_TASK,BLE_STOP_EVENT
+def stop_ble_session():
+    global BLE_TASK,BLE_STOP_EVENT
     if BLE_STOP_EVENT and not BLE_STOP_EVENT.is_set():
         BLE_STOP_EVENT.set()
         # BLE_TASK.cancel()
