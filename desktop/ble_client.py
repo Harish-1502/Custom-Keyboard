@@ -52,11 +52,6 @@ async def connect(device_name:str, char_uuid:str, state, FILE_LOCK: RLock):
         address = await find_device_address_by_name(device_name, timeout=8.0)
         print(f"Connecting to {address} ...")
         
-        # client = BleakClient(address, timeout=20.0)
-        
-        # BLE_CLIENT = client
-        
-        # client.set_disconnected_callback(lambda _: disc.set())
         disc = asyncio.Event()
 
         def on_disconnect(_client):
@@ -65,7 +60,6 @@ async def connect(device_name:str, char_uuid:str, state, FILE_LOCK: RLock):
 
         client = BleakClient(address, timeout=20.0, disconnected_callback=on_disconnect)
         BLE_CLIENT = client
-
         
         await client.connect()
         print("Connected to ESP32 Macro Pad!")
