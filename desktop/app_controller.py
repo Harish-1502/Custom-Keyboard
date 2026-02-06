@@ -1,5 +1,6 @@
 import asyncio
 import webbrowser
+from gui_host import GuiHost
 from firebase_admin import db
 from paths import CONFIG_PATH
 import json
@@ -33,6 +34,8 @@ class AppController:
         self.full_reload_from_db = full_reload_from_db
         self.array_index = array_index
         self.make_listener = make_listener
+        self._gui = GuiHost(self.FILE_LOCK, self.state)
+
 
     # Kills everything
     def exit_app(self, icon):
@@ -88,6 +91,5 @@ class AppController:
         self.state["activeProfile"] = new_active_profile
         self.db.reference(f"profiles/{new_active_profile}").listen(self.make_listener(new_active_profile, self.FILE_LOCK))
 
-    # Increment the active profile in the config list array
-    # def increment_array_index(self,*_):
-    #     self.change_profile(1)
+    def open_gui(self):
+        self._gui.open_config()

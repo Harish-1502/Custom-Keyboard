@@ -20,10 +20,14 @@ FILE_LOCK = threading.RLock()
 LOOP = None
 
 # Loading previous state from shutdown
-state = {"activeProfile": load_prev_state(FILE_LOCK)}
+# state = {"activeProfile": load_prev_state(FILE_LOCK)}
+# state["connected"] = False
+# state["gui_window"] = None
+state = {"activeProfile": load_prev_state(FILE_LOCK), "connected": False, "gui_window": None}
 
 # DEBUG
 # print("activeProfile from recall function: ", active_profile) 
+
 
 # Getting the array index from the array that the active profile is in
 array_index = 0

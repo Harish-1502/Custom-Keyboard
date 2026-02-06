@@ -10,6 +10,7 @@ from threading import RLock
 BLE_TASK: asyncio.Task | None = None
 BLE_CLIENT: BleakClient | None = None
 BLE_STOP_EVENT: asyncio.Event | None = None
+APP_STATE: dict | None = None
 
 load_dotenv()
 
@@ -20,6 +21,26 @@ if not address:
     raise RuntimeError("Missing ADDRESS env var (BLE MAC). Set ADDRESS=AA:BB:CC:DD:EE:FF")
 if not char_uuid:
     raise RuntimeError("Missing CHAR_UUID env var (notify characteristic UUID).")
+
+def _set_connected(state: dict | None, connected: bool):
+    if not state:
+        return
+
+    state["connected"] = connected
+
+    gui = state.get("gui_window")
+    if gui is None:
+        print("GUI: no window open")
+        return
+
+    try:
+        if gui.winfo_exists():
+            gui.set_connected(connected)
+            print(f"GUI: set_connected({connected}) OK")
+        else:
+            print("GUI: window does not exist")
+    except Exception as e:
+        print("GUI: set_connected failed:", repr(e))
 
 #Verifies if there is a characteristic uuid and what properties it has so it prevents the "it's connected but nothing happens" error 
 async def verify_char_uuid(client, char_uuid: str):
@@ -56,6 +77,7 @@ async def connect(device_name:str, char_uuid:str, state, FILE_LOCK: RLock):
 
         def on_disconnect(_client):
             print("Device disconnected.")
+            _set_connected(state, False)
             disc.set()
 
         client = BleakClient(address, timeout=20.0, disconnected_callback=on_disconnect)
@@ -63,6 +85,7 @@ async def connect(device_name:str, char_uuid:str, state, FILE_LOCK: RLock):
         
         await client.connect()
         print("Connected to ESP32 Macro Pad!")
+        _set_connected(state, True)
         
         await asyncio.sleep(0.8)
 
@@ -108,6 +131,7 @@ async def connect(device_name:str, char_uuid:str, state, FILE_LOCK: RLock):
         BLE_STOP_EVENT = None
         BLE_TASK = None
         print("BLE disconnected (session ended).")
+        _set_connected(state, False)
         
 # Gets the button ID and activates the trigger_macro function
 def make_notification_handler(state, FILE_LOCK: RLock):
@@ -137,7 +161,8 @@ def trigger_macro(button_id, profile, FILE_LOCK):
         
 # Helper function to do connect 
 def start_ble_session(name, FILE_LOCK: RLock, state, LOOP):
-    global BLE_TASK
+    global BLE_TASK, APP_STATE
+    APP_STATE = state
     if BLE_TASK and not BLE_TASK.done():
         print("BLE session already running.")
         return BLE_TASK
@@ -151,12 +176,16 @@ def start_ble_session(name, FILE_LOCK: RLock, state, LOOP):
 
 # Helper function to disconnect 
 def stop_ble_session():
-    global BLE_TASK,BLE_STOP_EVENT
+    global BLE_TASK, BLE_STOP_EVENT, APP_STATE
+
+    _set_connected(APP_STATE, False)
+
+    if BLE_TASK and not BLE_TASK.done():
+        BLE_TASK.cancel()
+
     if BLE_STOP_EVENT and not BLE_STOP_EVENT.is_set():
         BLE_STOP_EVENT.set()
-        # BLE_TASK.cancel()
         print("Requesting BLE session cancel...")
         return
-    # BLE_TASK = None
     
     print("No BLE session to cancel.")

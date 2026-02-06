@@ -17,7 +17,7 @@
       "BTN:3": {
         "keys": [
           "ctrl",
-          "tab"
+          "home"
         ]
       },
       "BTN:4": {
@@ -31,7 +31,7 @@
       "BTN:1": {
         "keys": [
           "ctrl",
-          "y"
+          "a"
         ]
       },
       "BTN:2": {
@@ -50,6 +50,14 @@
         "keys": [
           "ctrl",
           "home"
+        ]
+      }
+    },
+    "youtube": {
+      "BTN:1": {
+        "keys": [
+          "ctrl",
+          "a"
         ]
       }
     }
