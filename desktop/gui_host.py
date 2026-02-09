@@ -3,7 +3,7 @@ import threading
 import queue
 import tkinter as tk
 
-from gui import ConfigGui
+from gui import ConfigGui, open_config_gui
 
 class GuiHost:
     def __init__(self, file_lock, state):
@@ -50,9 +50,7 @@ class GuiHost:
         # Function to open the config window
         def _open():
             assert self._root is not None
-            win = ConfigGui(self._root, file_lock=self.file_lock, state=self.state)
-            win.lift()
-            win.focus_force()
+            open_config_gui(self.file_lock, self.state)
 
         # Queue the open task to be run in the GUI thread
         self._q.put(_open)

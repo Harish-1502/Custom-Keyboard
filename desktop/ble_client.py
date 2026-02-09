@@ -36,9 +36,9 @@ def _set_connected(state: dict | None, connected: bool):
     try:
         if gui.winfo_exists():
             gui.set_connected(connected)
-            print(f"GUI: set_connected({connected}) OK")
-        else:
-            print("GUI: window does not exist")
+            # print(f"GUI: set_connected({connected}) OK")
+        # else:
+            # print("GUI: window does not exist")
     except Exception as e:
         print("GUI: set_connected failed:", repr(e))
 
