@@ -1,5 +1,5 @@
 {
-  "activeProfile": "default",
+  "activeProfile": "computer",
   "profiles": {
     "computer": {
       "BTN:1": {
@@ -50,14 +50,6 @@
         "keys": [
           "ctrl",
           "home"
-        ]
-      }
-    },
-    "youtube": {
-      "BTN:1": {
-        "keys": [
-          "ctrl",
-          "a"
         ]
       }
     }

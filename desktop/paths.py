@@ -5,3 +5,5 @@ ROOT_DIR = BASE_DIR.parent
 
 CONFIG_PATH = BASE_DIR / 'config/buttonControls.json'
 ASSETS_PATH = ROOT_DIR / 'assets/controller.png'
+
+DEFAULT_CONFIG_PATH = BASE_DIR / 'config/default_config.json'
