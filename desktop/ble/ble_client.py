@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 import json
 import pyautogui
 
-from paths import CONFIG_PATH
+from desktop.core.paths import CONFIG_PATH
 from threading import RLock
 
 BLE_TASK: asyncio.Task | None = None

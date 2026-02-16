@@ -1,10 +1,12 @@
 import asyncio
 import webbrowser
-from gui_host import GuiHost
-from firebase_admin import db
-from paths import CONFIG_PATH
+from desktop.cloud.rtdb_client import set_active_profile
+from desktop.ui.gui_host import GuiHost
+# from firebase_admin import db
+from desktop.core.paths import CONFIG_PATH
 import json
 import os
+import desktop.cloud.cloud as cloud
 
 class AppController:
     def __init__(
@@ -17,7 +19,6 @@ class AppController:
         char_uuid,
         start_ble_session,
         stop_ble_session,
-        make_listener,
         full_reload_from_db,
         array_index
     ):
@@ -29,11 +30,8 @@ class AppController:
         self.char_uuid = char_uuid
         self.start_ble_session = start_ble_session
         self.stop_ble_session = stop_ble_session
-        self.make_listener = None
-        self.db = db
         self.full_reload_from_db = full_reload_from_db
         self.array_index = array_index
-        self.make_listener = make_listener
         self._gui = GuiHost(self.FILE_LOCK, self.state)
 
 
@@ -73,7 +71,8 @@ class AppController:
             with CONFIG_PATH.open("w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2)
         
-        self.db.reference("/").update({f"activeProfile": new_profile})
+        # self.db.reference("/").update({f"activeProfile": new_profile})
+        set_active_profile(cloud.cloud_sync.rtdb, cloud.cloud_sync.uid, cloud.cloud_sync.id_token, new_profile)
 
     # Used to change the active profile 
     def change_profile(self, step):
@@ -89,7 +88,7 @@ class AppController:
         print(f"currently in {new_active_profile} mode")
         self.set_state(new_active_profile)
         self.state["activeProfile"] = new_active_profile
-        self.db.reference(f"profiles/{new_active_profile}").listen(self.make_listener(new_active_profile, self.FILE_LOCK))
+        # self.db.reference(f"profiles/{new_active_profile}").listen(self.make_listener(new_active_profile, self.FILE_LOCK))
 
     def open_gui(self):
         self._gui.open_config()

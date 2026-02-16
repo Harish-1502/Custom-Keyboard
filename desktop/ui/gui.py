@@ -3,8 +3,10 @@ import tkinter as tk
 from tkinter import messagebox
 import customtkinter as ctk
 
-from firebase_admin import db
-from config_store import load_config, save_config, get_profiles, get_mapping_str, set_mapping
+from desktop.cloud.rtdb_client import set_active_profile
+# from firebase_admin import db
+from desktop.core.config_store import load_config, save_config, get_profiles, get_mapping_str, set_mapping
+import desktop.cloud.cloud as cloud
 
 BUTTON_IDS = ["BTN:1", "BTN:2", "BTN:3", "BTN:4"]
 
@@ -64,9 +66,7 @@ class ConfigGui(ctk.CTkToplevel):
 
         # Make sure window is on top when opened from tray
         self.lift()
-        self.focus_force()
-
-        
+        self.focus_force()      
 
     def _build_topbar(self):
         top = ctk.CTkFrame(self, corner_radius=16)
@@ -213,12 +213,12 @@ class ConfigGui(ctk.CTkToplevel):
 
         self.data["activeProfile"] = prof
         self.app_state["activeProfile"] = prof
-
-        save_config(self.file_lock, self.data)
-
+        
         try:
-            db.reference("/").update({"activeProfile": prof})
-            db.reference(f"profiles/{prof}").set(prof_data)
+            save_config(self.file_lock, self.data, cloud.cloud_sync, prof)
+            # db.reference("/").update({"activeProfile": prof})
+            # db.reference(f"profiles/{prof}").set(prof_data)
+
         except Exception as e:
             messagebox.showwarning("Saved locally", f"Saved locally, but Firebase update failed:\n{e}")
             return
@@ -246,7 +246,7 @@ class ConfigGui(ctk.CTkToplevel):
         self.data["activeProfile"] = name
         self.app_state["activeProfile"] = name
 
-        save_config(self.file_lock, self.data)
+        save_config(self.file_lock, self.data, cloud.cloud_sync)
 
         # Refresh
         self.profiles = get_profiles(self.data)
@@ -274,7 +274,7 @@ class ConfigGui(ctk.CTkToplevel):
             self.data["activeProfile"] = new_active
             self.app_state["activeProfile"] = new_active
 
-        save_config(self.file_lock, self.data)
+        save_config(self.file_lock, self.data, cloud.cloud_sync)
 
         self.profiles = get_profiles(self.data)
         self._refresh_profile_menu()
@@ -304,9 +304,6 @@ class ConfigGui(ctk.CTkToplevel):
             self.after(0, lambda: self._apply_conn_style(connected))
         except Exception:
             pass
-
-
-
 
 def open_config_gui(file_lock, state):
     """
