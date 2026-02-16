@@ -1,10 +1,10 @@
-from rtdb_client import get_user_config
+from desktop.cloud.rtdb_client import get_user_config
 import json
-from paths import CONFIG_PATH, DEFAULT_CONFIG_PATH
+from desktop.core.paths import CONFIG_PATH, DEFAULT_CONFIG_PATH
 from threading import RLock
 from dotenv import load_dotenv
 import os
-from cloud_sync import CloudSync
+from desktop.cloud.cloud_sync import CloudSync
 
 load_dotenv()
 api_key = os.getenv("API_KEY")
@@ -16,7 +16,7 @@ cloud_sync = None
 
 # Connects to firebase database
 def connecting_to_db(FILE_LOCK: RLock):
-    import config_store
+    import desktop.core.config_store as config_store
 
     global cloud_sync
     try:

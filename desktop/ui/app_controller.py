@@ -1,12 +1,12 @@
 import asyncio
 import webbrowser
-from rtdb_client import set_active_profile
-from gui_host import GuiHost
+from desktop.cloud.rtdb_client import set_active_profile
+from desktop.ui.gui_host import GuiHost
 # from firebase_admin import db
-from paths import CONFIG_PATH
+from desktop.core.paths import CONFIG_PATH
 import json
 import os
-import cloud
+import desktop.cloud.cloud as cloud
 
 class AppController:
     def __init__(

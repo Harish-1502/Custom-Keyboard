@@ -2,13 +2,14 @@ import asyncio
 import os
 import threading
 
+from desktop.core.paths import CONFIG_PATH
 from dotenv import load_dotenv
 
-from config_store import ensure_local_config_exists, load_prev_state
-from cloud import full_reload_from_db, connecting_to_db
-from ble_client import start_ble_session, stop_ble_session
-from tray import build_tray
-from app_controller import AppController
+from desktop.core.config_store import ensure_local_config_exists, load_prev_state
+from desktop.cloud.cloud import full_reload_from_db, connecting_to_db
+from desktop.ble.ble_client import start_ble_session, stop_ble_session
+from desktop.ui.tray import build_tray
+from desktop.ui.app_controller import AppController
 
 load_dotenv()
 address = os.getenv("ADDRESS")
@@ -38,6 +39,10 @@ def run_event_loop_forever():
         LOOP.close()                         # 8) close the loop cleanly
         
 connecting_to_db(FILE_LOCK)
+
+print("config_store __file__ =", __file__)
+print("CONFIG_PATH =", CONFIG_PATH)
+
 
 ensure_local_config_exists(FILE_LOCK)
 

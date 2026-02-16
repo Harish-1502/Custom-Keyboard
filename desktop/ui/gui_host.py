@@ -3,7 +3,7 @@ import threading
 import queue
 import tkinter as tk
 
-from gui import ConfigGui, open_config_gui
+from desktop.ui.gui import ConfigGui, open_config_gui
 
 class GuiHost:
     def __init__(self, file_lock, state):

@@ -1,5 +1,5 @@
 import pystray
-from paths import ASSETS_PATH
+from desktop.core.paths import ASSETS_PATH
 from PIL import Image
 
 def build_tray(app):

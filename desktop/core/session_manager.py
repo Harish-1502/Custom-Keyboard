@@ -2,7 +2,7 @@ from __future__ import annotations
 import time
 from typing import Dict, Any, Optional
 
-from auth_client import FirebaseAuthClient, load_auth_cache, save_auth_cache
+from desktop.cloud.auth_client import FirebaseAuthClient, load_auth_cache, save_auth_cache
 
 class SessionManager:
     def __init__(self, api_key: str):

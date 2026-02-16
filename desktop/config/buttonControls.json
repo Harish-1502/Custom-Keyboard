@@ -1,5 +1,5 @@
 {
-  "activeProfile": "coding",
+  "activeProfile": "computer",
   "profiles": {
     "computer": {
       "BTN:1": {
@@ -51,26 +51,6 @@
           "ctrl",
           "home"
         ]
-      }
-    },
-    "coding": {
-      "BTN:1": {
-        "keys": [
-          "a"
-        ]
-      },
-      "BTN:2": {
-        "keys": [
-          "b"
-        ]
-      },
-      "BTN:3": {
-        "keys": [
-          "d"
-        ]
-      },
-      "BTN:4": {
-        "keys": []
       }
     }
   }

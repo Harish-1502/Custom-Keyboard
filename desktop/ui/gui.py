@@ -3,10 +3,10 @@ import tkinter as tk
 from tkinter import messagebox
 import customtkinter as ctk
 
-from rtdb_client import set_active_profile
+from desktop.cloud.rtdb_client import set_active_profile
 # from firebase_admin import db
-from config_store import load_config, save_config, get_profiles, get_mapping_str, set_mapping
-import cloud
+from desktop.core.config_store import load_config, save_config, get_profiles, get_mapping_str, set_mapping
+import desktop.cloud.cloud as cloud
 
 BUTTON_IDS = ["BTN:1", "BTN:2", "BTN:3", "BTN:4"]
 

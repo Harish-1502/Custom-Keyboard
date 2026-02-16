@@ -1,9 +1,9 @@
 import json
-from paths import CONFIG_PATH, DEFAULT_CONFIG_PATH
+from desktop.core.paths import CONFIG_PATH, DEFAULT_CONFIG_PATH
 from threading import RLock
-from rtdb_client import RTDBClient, set_profiles, set_active_profile
-from auth_client import ensure_logged_in
-import cloud
+from desktop.cloud.rtdb_client import RTDBClient, set_profiles, set_active_profile
+from desktop.cloud.auth_client import ensure_logged_in
+import desktop.cloud.cloud as cloud
 
 EMBEDDED_DEFAULT_CONFIG = {
     "activeProfile": "default",

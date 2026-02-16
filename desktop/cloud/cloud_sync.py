@@ -5,9 +5,9 @@ import threading
 from pathlib import Path
 from typing import Any, Dict, Optional, Callable
 
-from auth_client import ensure_logged_in
-from session_manager import SessionManager
-from rtdb_client import RTDBClient, seed_if_missing, put_user_config
+from desktop.cloud.auth_client import ensure_logged_in
+from desktop.core.session_manager import SessionManager
+from desktop.cloud.rtdb_client import RTDBClient, seed_if_missing, put_user_config
 
 def load_json_file(path: str, file_lock: threading.RLock) -> Optional[Dict[str, Any]]:
     p = Path(path)
