@@ -4,7 +4,7 @@ from tkinter import messagebox
 import customtkinter as ctk
 
 from rtdb_client import set_active_profile
-from firebase_admin import db
+# from firebase_admin import db
 from config_store import load_config, save_config, get_profiles, get_mapping_str, set_mapping
 import cloud
 

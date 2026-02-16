@@ -104,3 +104,19 @@ class CloudSync:
         """
         id_token = self.session.get_id_token()   # refreshes if needed
         self.rtdb.put(f"users/{self.uid}", id_token, config)
+
+    def restore_to_local_if_possible(self) -> bool:
+        """
+        Returns True if it restored local from cloud.
+        False if cloud had nothing.
+        """
+        uid = self.session.get_uid()
+        token = self.session.get_id_token()
+        cloud_data = self.rtdb.get(f"users/{uid}", token)
+
+        if not cloud_data:
+            return False
+
+        # write local
+        write_json_file(self.local_config_path, cloud_data, self.file_lock)
+        return True

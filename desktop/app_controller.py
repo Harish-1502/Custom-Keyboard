@@ -19,7 +19,6 @@ class AppController:
         char_uuid,
         start_ble_session,
         stop_ble_session,
-        make_listener,
         full_reload_from_db,
         array_index
     ):
@@ -31,11 +30,8 @@ class AppController:
         self.char_uuid = char_uuid
         self.start_ble_session = start_ble_session
         self.stop_ble_session = stop_ble_session
-        self.make_listener = None
-        # self.db = db
         self.full_reload_from_db = full_reload_from_db
         self.array_index = array_index
-        self.make_listener = make_listener
         self._gui = GuiHost(self.FILE_LOCK, self.state)
 
 

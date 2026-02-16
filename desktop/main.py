@@ -4,8 +4,8 @@ import threading
 
 from dotenv import load_dotenv
 
-from config_store import load_prev_state
-from cloud import full_reload_from_db, make_listener, connecting_to_db
+from config_store import ensure_local_config_exists, load_prev_state
+from cloud import full_reload_from_db, connecting_to_db
 from ble_client import start_ble_session, stop_ble_session
 from tray import build_tray
 from app_controller import AppController
@@ -13,49 +13,10 @@ from app_controller import AppController
 load_dotenv()
 address = os.getenv("ADDRESS")
 char_uuid = os.getenv("CHAR_UUID")
-cred = os.getenv("CRED")
 name = os.getenv("NAME")
 config_list = ["default","computer"]
 FILE_LOCK = threading.RLock()
 LOOP = None
-
-# Loading previous state from shutdown
-# state = {"activeProfile": load_prev_state(FILE_LOCK)}
-# state["connected"] = False
-# state["gui_window"] = None
-state = {"activeProfile": load_prev_state(FILE_LOCK), "connected": False, "gui_window": None}
-
-# DEBUG
-# print("activeProfile from recall function: ", active_profile) 
-
-
-# Getting the array index from the array that the active profile is in
-array_index = 0
-for index,profile_name  in enumerate(config_list):
-    if state["activeProfile"] == profile_name :
-        array_index = index
-        # print("Array index: ",array_index) 
-
-# DEBUG
-# active_profile = db.reference().get("activeProfile")
-# print("Active Profile: ",active_profile)
-
-# Creates the icon on the tray menu
-tray_controller = AppController(
-    LOOP,
-    FILE_LOCK,
-    state,
-    config_list,
-    name,
-    char_uuid,
-    start_ble_session,
-    stop_ble_session,
-    make_listener,
-    full_reload_from_db,
-    array_index
-)
-
-icon = build_tray(tray_controller)
 
 # Used to run the forever loop and will gracefully close everything
 def run_event_loop_forever():
@@ -76,6 +37,33 @@ def run_event_loop_forever():
         )
         LOOP.close()                         # 8) close the loop cleanly
         
-connecting_to_db(state["activeProfile"],FILE_LOCK)
+connecting_to_db(FILE_LOCK)
+
+ensure_local_config_exists(FILE_LOCK)
+
+state = {"activeProfile": load_prev_state(FILE_LOCK), "connected": False, "gui_window": None}
+
+# Getting the array index from the array that the active profile is in
+array_index = 0
+for index,profile_name  in enumerate(config_list):
+    if state["activeProfile"] == profile_name :
+        array_index = index
+        # print("Array index: ",array_index) 
+
+# Creates the icon on the tray menu
+tray_controller = AppController(
+    LOOP,
+    FILE_LOCK,
+    state,
+    config_list,
+    name,
+    char_uuid,
+    start_ble_session,
+    stop_ble_session,
+    full_reload_from_db,
+    array_index
+)
+icon = build_tray(tray_controller)
+
 threading.Thread(target=icon.run, daemon=True).start()
 run_event_loop_forever()
