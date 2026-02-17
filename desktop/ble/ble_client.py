@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 import json
 import pyautogui
 
-from desktop.core.paths import CONFIG_PATH
+from desktop.core.paths import get_config_path
 from threading import RLock
 
 BLE_TASK: asyncio.Task | None = None
@@ -145,7 +145,7 @@ def make_notification_handler(state, FILE_LOCK: RLock):
 # Reads buttonControls.json, gets the button_id and profile, finds the action and executes it
 def trigger_macro(button_id, profile, FILE_LOCK):
     with FILE_LOCK:
-        with CONFIG_PATH.open("r", encoding="utf-8") as f:
+        with get_config_path().open("r", encoding="utf-8") as f:
             config_file = json.load(f)
     action = config_file.get("profiles",{}).get(profile).get(button_id)
     print(action)

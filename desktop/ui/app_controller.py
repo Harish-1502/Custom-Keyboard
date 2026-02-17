@@ -3,7 +3,7 @@ import webbrowser
 from desktop.cloud.rtdb_client import set_active_profile
 from desktop.ui.gui_host import GuiHost
 # from firebase_admin import db
-from desktop.core.paths import CONFIG_PATH
+from desktop.core.paths import get_config_path
 import json
 import os
 import desktop.cloud.cloud as cloud
@@ -61,14 +61,14 @@ class AppController:
     def set_state(self, new_profile: str):
         with self.FILE_LOCK:
             try:
-                with CONFIG_PATH.open("r", encoding="utf-8") as f:
+                with get_config_path().open("r", encoding="utf-8") as f:
                     data = json.load(f)
             except FileNotFoundError:
                 data = {}
         
             data["activeProfile"] = new_profile
             
-            with CONFIG_PATH.open("w", encoding="utf-8") as f:
+            with get_config_path().open("w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2)
         
         # self.db.reference("/").update({f"activeProfile": new_profile})

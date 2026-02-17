@@ -1,5 +1,5 @@
 import json
-from desktop.core.paths import CONFIG_PATH, DEFAULT_CONFIG_PATH
+from desktop.core.paths import get_config_path, get_default_config_path
 from threading import RLock
 from desktop.cloud.rtdb_client import RTDBClient, set_profiles, set_active_profile
 from desktop.cloud.auth_client import ensure_logged_in
@@ -15,7 +15,7 @@ EMBEDDED_DEFAULT_CONFIG = {
 # # Load the active profile before closing the program
 def load_prev_state(file_lock: RLock) -> str | None:
     with file_lock:
-        with CONFIG_PATH.open("r", encoding="utf-8") as f:
+        with get_config_path().open("r", encoding="utf-8") as f:
             temp_config = json.load(f)
     return temp_config.get("activeProfile")
 
@@ -24,7 +24,7 @@ def load_config(file_lock):
     ensure_local_config_exists(file_lock)
     
     with file_lock:
-        with CONFIG_PATH.open("r", encoding="utf-8") as f:
+        with get_config_path().open("r", encoding="utf-8") as f:
             return json.load(f)
         
 def save_config(file_lock, data, cloud_sync=cloud.cloud_sync, prof: str | None = None):
@@ -32,7 +32,7 @@ def save_config(file_lock, data, cloud_sync=cloud.cloud_sync, prof: str | None =
     ensure_local_config_exists(file_lock)
 
     with file_lock:
-        with CONFIG_PATH.open("w", encoding="utf-8") as f:
+        with get_config_path().open("w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
     
     if cloud_sync:
@@ -81,7 +81,7 @@ def delete_profile(data: dict, profile_name: str):
 def ensure_local_config_exists(file_lock):
 
     with file_lock:
-        if CONFIG_PATH.exists():
+        if get_config_path().exists():
             return
 
     # Try to restore from cloud if available
@@ -94,9 +94,9 @@ def ensure_local_config_exists(file_lock):
             print("Cloud restore failed:", e)
 
     # Fallback: create defaults locally
-    if DEFAULT_CONFIG_PATH.exists():
+    if get_default_config_path().exists():
         try:
-            default_config = json.loads(DEFAULT_CONFIG_PATH.read_text(encoding="utf-8"))
+            default_config = json.loads(get_default_config_path().read_text(encoding="utf-8"))
         except Exception as e:
             print("Default config file is unreadable, using embedded defaults:", e)
             default_config = EMBEDDED_DEFAULT_CONFIG
@@ -106,7 +106,7 @@ def ensure_local_config_exists(file_lock):
 
     # 4) Write local config
     with file_lock:
-        CONFIG_PATH.write_text(json.dumps(default_config, indent=2), encoding="utf-8")
+        get_config_path().write_text(json.dumps(default_config, indent=2), encoding="utf-8")
 
     # 5) Optional: seed cloud so future restores work
     if cloud.cloud_sync:

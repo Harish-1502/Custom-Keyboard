@@ -1,11 +1,12 @@
 import pystray
-from desktop.core.paths import ASSETS_PATH
+from desktop.core.paths import get_assets_path
 from PIL import Image
 
 def build_tray(app):
 
     # Define the menu items
-    print(ASSETS_PATH)
+    ASSETS_PATH = get_assets_path()
+    # print(ASSETS_PATH)
     image = Image.open(ASSETS_PATH)
 
     menu = pystray.Menu(
