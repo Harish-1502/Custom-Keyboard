@@ -1,3 +1,8 @@
+import sys
+
+from desktop.ui import tray
+sys.coinit_flags = 0 
+
 import asyncio
 import os
 import threading
@@ -62,11 +67,12 @@ def main():
     )
 
     icon = build_tray(tray_controller)
+    tray_controller.set_icon(icon)
     threading.Thread(target=icon.run, daemon=True).start()
 
     # 6) Start BLE + run loop forever with proper cleanup
     try:
-        loop.call_soon(lambda: start_ble_session(name, file_lock, state, loop))
+        loop.call_soon(lambda: start_ble_session(name, file_lock, state, loop, on_connected=tray_controller.on_ble_connected, on_disconnected=tray_controller.on_ble_disconnected, on_error=tray_controller.on_ble_error))
         loop.run_forever()
     finally:
         stop_ble_session()

@@ -1,4 +1,5 @@
 import asyncio
+from email.mime import message
 import webbrowser
 from desktop.cloud.rtdb_client import set_active_profile
 from desktop.ui.gui_host import GuiHost
@@ -7,7 +8,11 @@ from desktop.core.paths import get_config_path
 import json
 import os
 import desktop.cloud.cloud as cloud
+import dotenv
 
+dotenv.load_dotenv()
+
+URL = os.getenv("DATABASE_URL")
 class AppController:
     def __init__(
         self,
@@ -33,7 +38,26 @@ class AppController:
         self.full_reload_from_db = full_reload_from_db
         self.array_index = array_index
         self._gui = GuiHost(self.FILE_LOCK, self.state)
+        self.icon = None
 
+    def set_icon(self, icon):
+        self.icon = icon
+        self.apply_tray_title()
+    
+    def apply_tray_title(self):
+        if not self.icon:
+            return
+        status = "Connected" if self.state.get("connected") else "Disconnected"
+        self.icon.title = f"Custom Keyboard - {status}"
+
+    def notify(self, message: str, title: str = "Custom Keyboard"):
+        print("NOTIFY:", message)
+        if self.icon:
+            self.apply_tray_title()   # <-- correct name
+            try:
+                self.icon.notify(message, title)
+            except Exception as e:
+                print("Tray notify failed:", e)
 
     # Kills everything
     def exit_app(self, icon):
@@ -46,7 +70,7 @@ class AppController:
     def tray_connect(self, *_):
         # called from tray thread → schedule work on asyncio loop
         print("Connecting to device")
-        self.LOOP.call_soon_threadsafe(lambda: self.start_ble_session(self.name, self.FILE_LOCK, self.state, self.LOOP))
+        self.LOOP.call_soon_threadsafe(lambda: self.start_ble_session(self.name, self.FILE_LOCK, self.state, self.LOOP, on_connected=self.on_ble_connected, on_disconnected=self.on_ble_disconnected, on_error=self.on_ble_error))
 
     # Used in pystray menu to disconnect
     def tray_disconnect(self, *_):
@@ -55,7 +79,7 @@ class AppController:
 
     # Goes to the database website
     def open_website(self, icon, item):
-        webbrowser.open("https://macro-controller-default-rtdb.firebaseio.com/")
+        webbrowser.open(URL)
         
     # Changes the active profile in the local json file    
     def set_state(self, new_profile: str):
@@ -92,3 +116,16 @@ class AppController:
 
     def open_gui(self):
         self._gui.open_config()
+
+# -------- Professional BLE event handlers --------
+    def on_ble_connected(self):
+        self.state["connected"] = True
+        self.notify("Device connected")
+
+    def on_ble_disconnected(self):
+        self.state["connected"] = False
+        self.notify("Device disconnected")
+
+    def on_ble_error(self, err: str):
+        self.state["connected"] = False
+        self.notify(f"BLE error: {err}")

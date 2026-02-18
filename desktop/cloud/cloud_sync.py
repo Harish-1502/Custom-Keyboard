@@ -38,10 +38,10 @@ class CloudSync:
         self.default_config = default_config
         self.session = SessionManager(api_key)
 
-        self.uid = self.session.get_uid()
-        self.id_token = self.session.get_id_token()
+        # self.uid = self.session.get_uid()
+        # self.id_token = self.session.get_id_token()
 
-    def connect(self) -> None:
+    def  connect(self) -> None:
         """
         Source of truth = local.
         Cloud = backup.
@@ -55,6 +55,8 @@ class CloudSync:
             - if cloud exists -> restore cloud to local
             - else -> write defaults local and upload defaults to cloud
         """
+
+        print("Connecting to cloud...")
         session = ensure_logged_in(self.api_key)
         self.uid = session["uid"]
         self._id_token = session["idToken"]
