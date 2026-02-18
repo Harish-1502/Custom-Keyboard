@@ -11,6 +11,7 @@ def build_tray(app):
 
     menu = pystray.Menu(
         pystray.MenuItem("Open DB", lambda icon, item: app.open_website(icon, item)),
+        pystray.MenuItem("Connect to DB", lambda icon, item: app.tray_sign_in(icon, item)),
         pystray.MenuItem("Open GUI", lambda icon, item: app.open_gui()),
         pystray.MenuItem("Refresh json", lambda icon, item: app.full_reload_from_db(app.FILE_LOCK)),
         pystray.MenuItem("Change profile", lambda icon, item: app.change_profile(step=1)),

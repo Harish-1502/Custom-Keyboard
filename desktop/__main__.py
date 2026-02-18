@@ -1,8 +1,5 @@
 import sys
-
-from desktop.ui import tray
 sys.coinit_flags = 0 
-
 import asyncio
 import os
 import threading
@@ -13,6 +10,9 @@ from desktop.cloud.cloud import full_reload_from_db, connecting_to_db
 from desktop.ble.ble_client import start_ble_session, stop_ble_session
 from desktop.ui.tray import build_tray
 from desktop.ui.app_controller import AppController
+
+print("pythoncom in modules?", "pythoncom" in sys.modules)
+
 
 def require_env(name: str) -> str:
     v = os.getenv(name)
@@ -63,6 +63,7 @@ def main():
         start_ble_session,
         stop_ble_session,
         full_reload_from_db,
+        connecting_to_db,
         array_index
     )
 

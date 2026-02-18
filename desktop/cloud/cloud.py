@@ -19,30 +19,31 @@ def connecting_to_db(FILE_LOCK: RLock):
     import desktop.core.config_store as config_store
 
     global cloud_sync
-    print("Starting cloud connection...")
+    # print("Starting cloud connection...")
     try:
         if get_default_config_path().exists():
             default_cfg = json.loads(get_default_config_path().read_text(encoding="utf-8"))
         else:
             default_cfg = config_store.EMBEDDED_DEFAULT_CONFIG
         
-        print("Attempting to connect to cloud...")
-        print(f"Using API Key: {FIREBASE_API_KEY}")
-        print(f"Using DB URL: {FIREBASE_DB_URL}")
-        print(f"Local config path: {get_config_path()}")
-        print(f"default_cfg: {default_cfg}")
+        # print("Attempting to connect to cloud...")
+        # print(f"Using API Key: {FIREBASE_API_KEY}")
+        # print(f"Using DB URL: {FIREBASE_DB_URL}")
+        # print(f"Local config path: {get_config_path()}")
+        # print(f"default_cfg: {default_cfg}")
         
-        cloud_sync = CloudSync(
-                FIREBASE_API_KEY, 
-                FIREBASE_DB_URL, 
-                str(get_config_path()), 
-                FILE_LOCK, 
-                default_config=default_cfg)
+        if cloud_sync is None:
+            cloud_sync = CloudSync(
+                    FIREBASE_API_KEY, 
+                    FIREBASE_DB_URL, 
+                    str(get_config_path()), 
+                    FILE_LOCK, 
+                    default_config=default_cfg)
         
-        print("CloudSync :", cloud_sync)
+        # print("CloudSync :", cloud_sync)
         
         cloud_sync.connect()
-        print("Connected to cloud and synced config.")
+        # print("Connected to cloud and synced config.")
     except Exception as e:
         print("Failed to connect to cloud:", e)
         cloud_sync = None

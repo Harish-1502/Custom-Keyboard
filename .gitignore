@@ -6,5 +6,4 @@ firmware/
 .vscode/
 docs/
 desktop/practice.py
-.github/
 test.py

@@ -25,6 +25,7 @@ class AppController:
         start_ble_session,
         stop_ble_session,
         full_reload_from_db,
+        connecting_to_db,
         array_index
     ):
         self.LOOP = loop
@@ -36,9 +37,11 @@ class AppController:
         self.start_ble_session = start_ble_session
         self.stop_ble_session = stop_ble_session
         self.full_reload_from_db = full_reload_from_db
+        self.connecting_to_db = cloud.connecting_to_db
         self.array_index = array_index
         self._gui = GuiHost(self.FILE_LOCK, self.state)
         self.icon = None
+        self.cloud_sync = None
 
     def set_icon(self, icon):
         self.icon = icon
@@ -76,6 +79,13 @@ class AppController:
     def tray_disconnect(self, *_):
         print("Disconnecting from the device")
         self.LOOP.call_soon_threadsafe(self.stop_ble_session)
+
+    def tray_sign_in(self, *_):
+    # Don’t block the tray thread; schedule onto asyncio loop
+        self.LOOP.call_soon_threadsafe(lambda: self.LOOP.create_task(self._async_cloud_connect()))
+    
+    async def _async_cloud_connect(self):
+        await asyncio.to_thread(self.connecting_to_db, self.FILE_LOCK)
 
     # Goes to the database website
     def open_website(self, icon, item):

@@ -215,6 +215,8 @@ def start_ble_session(
         return BLE_TASK
 
     async def connect_wrapper():
+        from bleak.backends.winrt.util import uninitialize_sta
+        uninitialize_sta()
         await asyncio.sleep(0.5)
         await connect(
             name,

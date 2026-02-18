@@ -58,6 +58,9 @@ class CloudSync:
 
         print("Connecting to cloud...")
         session = ensure_logged_in(self.api_key)
+        if not session:
+            print("Login failed or cancelled.")
+            return
         self.uid = session["uid"]
         self._id_token = session["idToken"]
         self._refresh_token = session["refreshToken"]
