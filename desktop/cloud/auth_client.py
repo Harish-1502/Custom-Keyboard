@@ -8,7 +8,7 @@ import tkinter as tk
 
 import requests
 
-from desktop.ui.login_dialog import prompt_credentials
+from desktop.ui.login_dialog import prompt_credentials_threadsafe
 
 FIREBASE_AUTH_BASE = "https://identitytoolkit.googleapis.com/v1"
 FIREBASE_SECURETOKEN_BASE = "https://securetoken.googleapis.com/v1"
@@ -89,7 +89,7 @@ def ensure_logged_in(api_key:str) -> Dict[str, Any]:
 
     if(cache is None):
         print("Cache not found. Please login.")
-        creds = prompt_credentials("CustomKeyboard")
+        creds = prompt_credentials_threadsafe("CustomKeyboard")
         if not creds:
             return None
         email, password = creds
@@ -109,7 +109,7 @@ def ensure_logged_in(api_key:str) -> Dict[str, Any]:
         print("Login required. Please sign in with your email and password.")
         # email = input("Email: ").strip()
         # password = input("Password: ").strip()
-        creds = prompt_credentials("CustomKeyboard")
+        creds = prompt_credentials_threadsafe("CustomKeyboard")
         if not creds:
             return None
         email, password = creds

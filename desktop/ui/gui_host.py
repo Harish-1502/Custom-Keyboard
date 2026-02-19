@@ -6,9 +6,10 @@ import tkinter as tk
 from desktop.ui.gui import ConfigGui, open_config_gui
 
 class GuiHost:
-    def __init__(self, file_lock, state):
+    def __init__(self, file_lock, state, controller):
         self.file_lock = file_lock
         self.state = state
+        self.controller = controller
         self._q: "queue.Queue[callable]" = queue.Queue()
         self._thread: threading.Thread | None = None
         self._root: tk.Tk | None = None
@@ -50,7 +51,7 @@ class GuiHost:
         # Function to open the config window
         def _open():
             assert self._root is not None
-            open_config_gui(self.file_lock, self.state)
+            open_config_gui(self.file_lock, self.state, self.controller)
 
         # Queue the open task to be run in the GUI thread
         self._q.put(_open)

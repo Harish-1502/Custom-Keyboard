@@ -26,7 +26,7 @@ def parse_hotkey(text: str) -> list[str]:
 
 
 class ConfigGui(ctk.CTkToplevel):
-    def __init__(self, master, file_lock, state):
+    def __init__(self, master, file_lock, state, controller):
         super().__init__(master)
 
         # ---- Theme ----
@@ -39,6 +39,7 @@ class ConfigGui(ctk.CTkToplevel):
 
         self.file_lock = file_lock
         self.app_state = state
+        self.controller = controller
 
         self.data = load_config(self.file_lock)
         self.profiles = get_profiles(self.data)
@@ -176,7 +177,8 @@ class ConfigGui(ctk.CTkToplevel):
 
     def _refresh_profile_menu(self):
         # CustomTkinter option menu needs explicit value refresh
-        self.profile_menu.configure(values=self.profiles)
+        self.controller.refresh_json(self.file_lock)  # <-- trigger any external updates first
+
 
     def _reload_from_disk(self):
         self.data = load_config(self.file_lock)
@@ -305,7 +307,7 @@ class ConfigGui(ctk.CTkToplevel):
         except Exception:
             pass
 
-def open_config_gui(file_lock, state):
+def open_config_gui(file_lock, state, controller):
     """
     Same behavior as your original: safe to call from tray thread *if*
     your app already uses a GUI host that schedules onto the main Tk thread.
@@ -316,7 +318,7 @@ def open_config_gui(file_lock, state):
         root = tk.Tk()
         root.withdraw()
 
-    win = ConfigGui(root, file_lock=file_lock, state=state)
+    win = ConfigGui(root, file_lock=file_lock, state=state, controller=controller)
     state["gui_window"] = win
     try:
         win.set_connected(bool(state.get("connected")))

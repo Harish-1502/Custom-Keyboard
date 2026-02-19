@@ -8,6 +8,7 @@ from desktop.core.paths import get_config_path
 import json
 import os
 import desktop.cloud.cloud as cloud
+import requests
 import dotenv
 
 dotenv.load_dotenv()
@@ -37,9 +38,9 @@ class AppController:
         self.start_ble_session = start_ble_session
         self.stop_ble_session = stop_ble_session
         self.full_reload_from_db = full_reload_from_db
-        self.connecting_to_db = cloud.connecting_to_db
+        self.connecting_to_db = connecting_to_db
         self.array_index = array_index
-        self._gui = GuiHost(self.FILE_LOCK, self.state)
+        self._gui = GuiHost(self.FILE_LOCK, self.state, self)
         self.icon = None
         self.cloud_sync = None
 
@@ -47,6 +48,16 @@ class AppController:
         self.icon = icon
         self.apply_tray_title()
     
+    def refresh_json(self, file_lock):
+        self.notify("Refreshing config from database...")
+        try:
+            self.full_reload_from_db(file_lock)
+            self.notify("Config refreshed from database.")
+        except requests.exceptions.RequestException as e:
+            self.notify(f"Network error during refresh: {e}") 
+        except Exception as e:
+            self.notify(f"Failed to refresh config: {e}")
+
     def apply_tray_title(self):
         if not self.icon:
             return

@@ -50,7 +50,7 @@ def connecting_to_db(FILE_LOCK: RLock):
 
 #  Replaces the current json file in the project with the json from the database
 def full_reload_from_db(FILE_LOCK: RLock):
-    full_data = get_user_config(cloud_sync.rtdb, cloud_sync.session.get_uid(), cloud_sync.session.get_id_token())
+    full_data = get_user_config(cloud_sync.rtdb, cloud_sync.session.get_id_token(), cloud_sync.session.get_uid())
 
     with FILE_LOCK:
         try:

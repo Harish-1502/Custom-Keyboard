@@ -10,9 +10,10 @@ from desktop.cloud.cloud import full_reload_from_db, connecting_to_db
 from desktop.ble.ble_client import start_ble_session, stop_ble_session
 from desktop.ui.tray import build_tray
 from desktop.ui.app_controller import AppController
+from desktop.version import __version__
+# print("pythoncom in modules?", "pythoncom" in sys.modules)
 
-print("pythoncom in modules?", "pythoncom" in sys.modules)
-
+print(f"Macro Controller v{__version__}")
 
 def require_env(name: str) -> str:
     v = os.getenv(name)
@@ -27,7 +28,7 @@ def main():
     char_uuid = require_env("CHAR_UUID")
     name = os.getenv("NAME") or "Macropad"
 
-    config_list = ["default", "computer"]
+    config_list = ["default", "computer"]    
     file_lock = threading.RLock()
 
     # 1) Ensure local config exists BEFORE reading it

@@ -34,7 +34,7 @@ def get_config_path() -> Path:
 
 # DEBUGGING: Print paths to verify correctness
 # print("Config path:", get_config_path())
-print("Default config path:", get_default_config_path())
-print("Assets path:", get_assets_path())
-print("Base path:", base_path())
-print("Config path exists?", get_config_path().exists())
+# print("Default config path:", get_default_config_path())
+# print("Assets path:", get_assets_path())
+# print("Base path:", base_path())
+# print("Config path exists?", get_config_path().exists())

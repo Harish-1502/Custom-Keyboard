@@ -51,12 +51,12 @@ class SessionManager:
 
     def update_from_login(self, signed: Dict[str, Any]) -> None:
         """
-        If you do an explicit login/signup and get a response with localId/idToken/refreshToken,
+        If you do an explicit login/signup and get a response with user_id/idToken/refreshToken,
         store it here.
         """
         self._cache = {
             "email": signed.get("email"),
-            "uid": signed["localId"],
+            "uid": signed["uid"],
             "idToken": signed["idToken"],
             "refreshToken": signed["refreshToken"],
         }

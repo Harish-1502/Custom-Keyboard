@@ -1,5 +1,7 @@
+import threading
 import tkinter as tk
 from tkinter import ttk, messagebox
+from typing import Optional, Tuple
 
 def prompt_credentials(app_name: str = "CustomKeyboard") -> tuple[str, str] | None:
     root = tk.Tk()
@@ -23,8 +25,12 @@ def prompt_credentials(app_name: str = "CustomKeyboard") -> tuple[str, str] | No
     result: dict[str, str] = {}
 
     def on_ok():
-        email = email_var.get().strip()
-        pwd = pass_var.get()
+        email = email_entry.get().strip()
+        pwd = pass_entry.get()
+        # print("email_var:", repr(email_var.get()))
+        # print("pass_var:", repr(pass_var.get()))
+        # print("entry email:", repr(email_entry.get()))
+        # print("entry pass:", repr(pass_entry.get()))
         if not email or not pwd:
             messagebox.showerror("Missing info", "Please enter email and password.")
             return
@@ -46,3 +52,23 @@ def prompt_credentials(app_name: str = "CustomKeyboard") -> tuple[str, str] | No
     if "email" in result:
         return result["email"], result["password"]
     return None
+
+def prompt_credentials_threadsafe(app_name: str = "CustomKeyboard") -> Optional[Tuple[str, str]]:
+    result: dict = {"creds": None, "err": None}
+    done = threading.Event()
+
+    def ui_thread():
+        try:
+            result["creds"] = prompt_credentials(app_name)
+        except Exception as e:
+            result["err"] = e
+        finally:
+            done.set()
+
+    t = threading.Thread(target=ui_thread, daemon=True)
+    t.start()
+    done.wait()
+
+    if result["err"]:
+        raise result["err"]
+    return result["creds"]

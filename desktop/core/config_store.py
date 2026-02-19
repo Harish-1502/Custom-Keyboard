@@ -82,11 +82,13 @@ def ensure_local_config_exists(file_lock):
 
     with file_lock:
         if get_config_path().exists():
+            print("Local config file exists.")
             return
 
     # Try to restore from cloud if available
     if cloud.cloud_sync:
         try:
+            print("Local config missing. Attempting to restore from cloud...")
             restored = cloud.cloud_sync.restore_to_local_if_possible()
             if restored:
                 return
