@@ -41,12 +41,18 @@ class ConfigGui(ctk.CTkToplevel):
         self.app_state = state
         self.controller = controller
 
+        self._did_cleanup = False
+        self.bind("<Destroy>", self._on_destroy, add="+")
+
         self.data = load_config(self.file_lock)
         self.profiles = get_profiles(self.data)
         if not self.profiles:
-            messagebox.showerror("Error", "No profiles found in config.")
-            self.destroy()
-            return
+            # Self-heal instead of closing
+            self.data["profiles"] = {"default": {}}
+            self.data["activeProfile"] = "default"
+            save_config(self.file_lock, self.data, cloud.cloud_sync)
+            self.profiles = ["default"]
+            self.app_state["activeProfile"] = "default"
 
         # Root layout
         self.grid_columnconfigure(0, weight=1)
@@ -184,8 +190,12 @@ class ConfigGui(ctk.CTkToplevel):
         self.data = load_config(self.file_lock)
         self.profiles = get_profiles(self.data)
         if not self.profiles:
-            messagebox.showerror("Error", "No profiles found in config.")
-            return
+            # Self-heal instead of closing
+            self.data["profiles"] = {"default": {}}
+            self.data["activeProfile"] = "default"
+            save_config(self.file_lock, self.data, cloud.cloud_sync)
+            self.profiles = ["default"]
+            self.app_state["activeProfile"] = "default"
 
         self._refresh_profile_menu()
         if self.profile_var.get() not in self.profiles:
@@ -282,15 +292,38 @@ class ConfigGui(ctk.CTkToplevel):
         self._refresh_profile_menu()
         self.profile_var.set(self.app_state["activeProfile"])
         self._load_profile_into_fields()
+    
+    def _cleanup(self):
+        if self._did_cleanup:
+            return
+        self._did_cleanup = True
+        print("GUI: cleanup")
 
-    def _on_close(self):
-        # Clear GUI reference so BLE code doesn't talk to a dead window
         try:
             self.app_state["gui_window"] = None
         except Exception:
             pass
 
-        self.destroy()
+        try:
+            self.controller.gui_host.win_ref = None
+        except Exception:
+            pass
+
+    def _on_destroy(self, event):
+        # Only run once, and only when THIS toplevel is being destroyed
+        if event.widget is self:
+            print("GUI: <Destroy> fired")
+            self._cleanup()
+
+    def _on_close(self):
+        import traceback
+        print("GUI: _on_close called")
+        traceback.print_stack(limit=30)   # <-- add this
+        self._cleanup()
+        try:
+            self.destroy()
+        except Exception:
+            pass
 
     def _apply_conn_style(self, connected: bool):
         if connected:
@@ -307,17 +340,15 @@ class ConfigGui(ctk.CTkToplevel):
         except Exception:
             pass
 
-def open_config_gui(file_lock, state, controller):
-    """
-    Same behavior as your original: safe to call from tray thread *if*
-    your app already uses a GUI host that schedules onto the main Tk thread.
-    """
-    root = tk._default_root
-    if root is None:
-        # Create a hidden root window (CTk is fine too, but Tk is safest for shared tkinter state)
-        root = tk.Tk()
-        root.withdraw()
+def open_config_gui(master, file_lock, state, controller):
 
+    # root = tk._default_root
+    # if root is None:
+    #     # Create a hidden root window (CTk is fine too, but Tk is safest for shared tkinter state)
+    #     root = tk.Tk()
+    #     root.withdraw()
+    
+    root = master
     win = ConfigGui(root, file_lock=file_lock, state=state, controller=controller)
     state["gui_window"] = win
     try:
@@ -325,5 +356,13 @@ def open_config_gui(file_lock, state, controller):
     except Exception:
         pass
 
-    win.lift()
-    win.focus_force()
+    # Make sure it shows
+    try:
+        win.deiconify()
+        win.lift()
+        win.focus_force()
+        win.after(200, lambda: (win.lift(), win.focus_force()))
+    except Exception:
+        pass
+
+    return win

@@ -15,7 +15,7 @@ FIREBASE_DB_URL  = database_url
 cloud_sync = None
 
 # Connects to firebase database
-def connecting_to_db(FILE_LOCK: RLock):
+def connecting_to_db(FILE_LOCK: RLock) -> bool:
     import desktop.core.config_store as config_store
 
     global cloud_sync
@@ -42,11 +42,18 @@ def connecting_to_db(FILE_LOCK: RLock):
         
         # print("CloudSync :", cloud_sync)
         
-        cloud_sync.connect()
+        result = cloud_sync.connect()
+
+        if not result:
+            cloud_sync = None
+        
+        return result
         # print("Connected to cloud and synced config.")
+        
     except Exception as e:
         print("Failed to connect to cloud:", e)
         cloud_sync = None
+        return False
 
 #  Replaces the current json file in the project with the json from the database
 def full_reload_from_db(FILE_LOCK: RLock):

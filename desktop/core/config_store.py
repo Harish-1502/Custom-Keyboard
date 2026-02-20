@@ -21,11 +21,24 @@ def load_prev_state(file_lock: RLock) -> str | None:
 
 def load_config(file_lock):
 
+    from desktop.core.paths import get_config_path
+    print("GUI reading config from:", get_config_path())
+    
     ensure_local_config_exists(file_lock)
     
     with file_lock:
-        with get_config_path().open("r", encoding="utf-8") as f:
-            return json.load(f)
+        try:
+            data = json.loads(get_config_path().read_text(encoding="utf-8"))
+        except Exception:
+            data = {}
+
+        data, changed = normalize_config(data)
+
+        if changed:
+            # Write back repaired config (LOCAL ONLY; don't trigger cloud backup here)
+            get_config_path().write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+        return data
         
 def save_config(file_lock, data, cloud_sync=cloud.cloud_sync, prof: str | None = None):
 
@@ -118,3 +131,24 @@ def ensure_local_config_exists(file_lock):
             print("Cloud seed failed:", e)
 
     print("Local config created.")
+
+def normalize_config(data: dict) -> tuple[dict, bool]:
+    """
+    Ensure config always has at least one profile and a valid activeProfile.
+    Returns (normalized_data, changed_flag).
+    """
+    changed = False
+    if not isinstance(data, dict):
+        data = {}
+        changed = True
+
+    profiles = data.get("profiles")
+    if not isinstance(profiles, dict) or len(profiles) == 0:
+        data["profiles"] = {"default": {}}
+        changed = True
+
+    if not data.get("activeProfile") or data["activeProfile"] not in data["profiles"]:
+        data["activeProfile"] = next(iter(data["profiles"].keys()))
+        changed = True
+
+    return data, changed

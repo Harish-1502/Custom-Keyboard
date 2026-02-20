@@ -51,7 +51,7 @@ def main():
     asyncio.set_event_loop(loop)
 
     # 4) Start cloud sync after local config is guaranteed
-    connecting_to_db(file_lock)
+    # connecting_to_db(file_lock)
 
     # 5) Build controller with a real loop (no patching later)
     tray_controller = AppController(

@@ -41,7 +41,7 @@ class CloudSync:
         # self.uid = self.session.get_uid()
         # self.id_token = self.session.get_id_token()
 
-    def connect(self) -> None:
+    def connect(self) -> bool:
         """
         Source of truth = local.
         Cloud = backup.
@@ -60,7 +60,7 @@ class CloudSync:
         session = ensure_logged_in(self.api_key)
         if not session:
             print("Login failed or cancelled.")
-            return
+            return False
         self.session.update_from_login(session)
         self.uid = session["uid"]
         self._id_token = session["idToken"]
@@ -72,14 +72,14 @@ class CloudSync:
         # 2) read cloud (may be None if first time)
         cloud = get_user_config(self.rtdb, self._id_token, self.uid)
 
-        print(f"CloudSync connect: local exists={local is not None}, cloud exists={cloud is not None}")
+        # print(f"CloudSync connect: local exists={local is not None}, cloud exists={cloud is not None}")
 
-        print(f"Local config: {local}")
-        print(f"Cloud config: {cloud}")
+        # print(f"Local config: {local}")
+        # print(f"Cloud config: {cloud}")
         if local is not None:
             print("Local config exists. Keeping local as source of truth.")
             # Local exists → treat as truth
-            return
+            return True
 
         # local is missing:
         if cloud is not None:
@@ -87,12 +87,13 @@ class CloudSync:
             print("Restoring local config from cloud...")
             from desktop.cloud.cloud import full_reload_from_db
             full_reload_from_db(self.file_lock) 
-            return
+            return True
 
         # Both missing: create local defaults then upload
         print("No local or cloud config. Seeding defaults...")
         write_json_file(self.local_config_path, self.default_config, self.file_lock)
         put_user_config(self.rtdb, self.uid, self._id_token, self.default_config)
+        return True
         
     def backup_now(self) -> None:
         """

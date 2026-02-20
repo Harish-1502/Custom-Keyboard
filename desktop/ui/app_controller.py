@@ -96,7 +96,18 @@ class AppController:
         self.LOOP.call_soon_threadsafe(lambda: self.LOOP.create_task(self._async_cloud_connect()))
     
     async def _async_cloud_connect(self):
-        await asyncio.to_thread(self.connecting_to_db, self.FILE_LOCK)
+        self.notify("Signing in to cloud...")
+
+        try:
+            ok = await asyncio.to_thread(self.connecting_to_db, self.FILE_LOCK)
+
+            if ok:
+                self.notify("Cloud sign-in successful ✅")
+            else:
+                self.notify("Cloud sign-in failed or was cancelled ❌")
+
+        except Exception as e:
+            self.notify(f"Cloud sign-in crashed: {e}")
 
     # Goes to the database website
     def open_website(self, icon, item):
@@ -116,8 +127,18 @@ class AppController:
             with get_config_path().open("w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2)
         
-        # self.db.reference("/").update({f"activeProfile": new_profile})
-        set_active_profile(cloud.cloud_sync.rtdb, cloud.cloud_sync.uid, cloud.cloud_sync.id_token, new_profile)
+        # Only update cloud if connected
+        try:
+            if cloud.cloud_sync and getattr(cloud.cloud_sync, "rtdb", None):
+                set_active_profile(
+                    cloud.cloud_sync.rtdb,
+                    cloud.cloud_sync.uid,
+                    cloud.cloud_sync.id_token,
+                    new_profile
+                )
+        except Exception as e:
+            # Don't crash the app if cloud update fails
+            print("Cloud activeProfile update failed:", e)
 
     # Used to change the active profile 
     def change_profile(self, step):
