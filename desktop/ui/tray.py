@@ -1,9 +1,18 @@
-import pystray
 from desktop.core.paths import get_assets_path
 from PIL import Image
 
+def _get_pystray():
+    try:
+        import pystray  # type: ignore
+        return pystray
+    except Exception:
+        return None
+    
 def build_tray(app):
-
+    pystray = _get_pystray()
+    if pystray is None:
+        return None
+    
     # Define the menu items
     ASSETS_PATH = get_assets_path()
     # print(ASSETS_PATH)

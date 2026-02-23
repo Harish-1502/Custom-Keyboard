@@ -4,7 +4,6 @@ import pytest
 from pathlib import Path
 from desktop.ble import ble_client
 
-
 def test_verify_char_uuid_missing():
     class FakeServices:
         def get_characteristic(self, uuid):
@@ -38,11 +37,12 @@ def test_trigger_macro(tmp_path, monkeypatch):
 
     calls = []
 
-    monkeypatch.setattr(
-        ble_client.pyautogui,
-        "hotkey",
-        lambda *keys: calls.append(keys)
-    )
+    from unittest.mock import MagicMock
+
+    fake = MagicMock()
+    fake.hotkey = lambda *keys: calls.append(keys)
+
+    monkeypatch.setattr(ble_client, "_get_pyautogui", lambda: fake)
 
     ble_client.trigger_macro("BTN:1", "default", threading.RLock())
     assert calls == [("ctrl", "a")]

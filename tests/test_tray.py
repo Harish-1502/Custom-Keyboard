@@ -28,9 +28,15 @@ def test_build_tray_calls_image_open(monkeypatch):
             self.title = title
             self.menu = menu
 
-    monkeypatch.setattr(tray.pystray, "MenuItem", FakeMenuItem)
-    monkeypatch.setattr(tray.pystray, "Menu", FakeMenu)
-    monkeypatch.setattr(tray.pystray, "Icon", FakeIcon)
+    import types
+
+    fake_pystray = types.SimpleNamespace(
+        MenuItem=FakeMenuItem,
+        Menu=FakeMenu,
+        Icon=FakeIcon,
+    )
+
+    monkeypatch.setattr(tray, "_get_pystray", lambda: fake_pystray)
 
     class FakeApp:
         def open_website(self, *_): pass

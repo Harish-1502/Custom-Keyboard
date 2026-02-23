@@ -318,7 +318,7 @@ class ConfigGui(ctk.CTkToplevel):
     def _on_close(self):
         import traceback
         print("GUI: _on_close called")
-        traceback.print_stack(limit=30)   # <-- add this
+        # traceback.print_stack(limit=30) 
         self._cleanup()
         try:
             self.destroy()

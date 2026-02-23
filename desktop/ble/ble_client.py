@@ -2,10 +2,23 @@ import asyncio, os
 from bleak import BleakClient, BleakScanner
 from dotenv import load_dotenv
 import json
-import pyautogui
 
 from desktop.core.paths import get_config_path
 from threading import RLock
+
+def _get_pyautogui():
+    """
+    Lazy import pyautogui so tests can import this module on headless Linux CI.
+    Returns None if GUI automation is unavailable.
+    """
+    # On Linux CI, DISPLAY is usually not set => headless => pyautogui import will crash
+    if os.name != "nt" and not os.environ.get("DISPLAY"):
+        return None
+    try:
+        import pyautogui  # type: ignore
+        return pyautogui
+    except Exception:
+        return None
 
 BLE_TASK: asyncio.Task | None = None
 BLE_CLIENT: BleakClient | None = None
@@ -36,9 +49,9 @@ def _set_connected(state: dict | None, connected: bool):
     try:
         if gui.winfo_exists():
             gui.set_connected(connected)
-            # print(f"GUI: set_connected({connected}) OK")
-        # else:
-            # print("GUI: window does not exist")
+            print(f"GUI: set_connected({connected}) OK")
+        else:
+            print("GUI: window does not exist")
     except Exception as e:
         print("GUI: set_connected failed:", repr(e))
 
@@ -190,6 +203,11 @@ def trigger_macro(button_id, profile, FILE_LOCK):
     if action:
         keys = action.get("keys")
         if keys:
+            pyautogui = _get_pyautogui()
+            if not pyautogui:
+                print("GUI automation unavailable: cannot trigger macro.")
+                return
+            
             print(f"Triggering {button_id}: printing {keys}")
             pyautogui.hotkey(*keys)
         else:
