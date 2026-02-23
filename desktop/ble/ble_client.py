@@ -24,6 +24,7 @@ BLE_TASK: asyncio.Task | None = None
 BLE_CLIENT: BleakClient | None = None
 BLE_STOP_EVENT: asyncio.Event | None = None
 APP_STATE: dict | None = None
+address, char_uuid = None, None
 
 load_dotenv()
 
@@ -38,7 +39,7 @@ def get_ble_settings():
 
     return address, char_uuid
 
-address, char_uuid = get_ble_settings()
+# address, char_uuid = get_ble_settings()
 
 def _set_connected(state: dict | None, connected: bool):
     if not state:
@@ -93,6 +94,7 @@ async def connect(
     global BLE_CLIENT, BLE_STOP_EVENT, BLE_TASK
 
     BLE_STOP_EVENT = asyncio.Event()
+    address, char_uuid = get_ble_settings()
 
     try:
         address = await find_device_address_by_name(device_name, timeout=8.0)
