@@ -27,13 +27,18 @@ APP_STATE: dict | None = None
 
 load_dotenv()
 
-address = os.getenv("ADDRESS")
-char_uuid = os.getenv("CHAR_UUID")
+def get_ble_settings():
+    address = os.getenv("ADDRESS")
+    char_uuid = os.getenv("CHAR_UUID")
 
-if not address:
-    raise RuntimeError("Missing ADDRESS env var (BLE MAC). Set ADDRESS=AA:BB:CC:DD:EE:FF")
-if not char_uuid:
-    raise RuntimeError("Missing CHAR_UUID env var (notify characteristic UUID).")
+    if not address:
+        raise RuntimeError("Missing ADDRESS env var (BLE MAC). Set ADDRESS=AA:BB:CC:DD:EE:FF")
+    if not char_uuid:
+        raise RuntimeError("Missing CHAR_UUID env var (notify characteristic UUID).")
+
+    return address, char_uuid
+
+address, char_uuid = get_ble_settings()
 
 def _set_connected(state: dict | None, connected: bool):
     if not state:
