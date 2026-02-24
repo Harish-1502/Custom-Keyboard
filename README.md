@@ -1,52 +1,84 @@
-# Custom-Keyboard
+# Custom BLE Macro Pad
 
-This is a custom keyboard built using an ESP32, buttons and a breadboard with a Python script to perform keyboard shortcuts.
+An end-to-end customizable Bluetooth macro pad built with an ESP32 and a Python desktop application.
 
-- Demo coming soon
+It allows physical buttons to trigger configurable shortcuts on a PC via BLE, with local configuration and optional cloud sync.
 
-# Why This Was Made
+---
 
-The goal of this project was to be a customizable keyboard that can be used for various cases such as daily office work, gaming, or video editing.
+## Features
 
-# Tech Stack:
+- ESP32 BLE communication
+- Desktop app built with Python (CustomTkinter)
+- Configurable button mappings
+- Local JSON configuration storage
+- Firebase Real-Time Database integration
+- Asynchronous BLE handling
+- Multi-threaded desktop architecture
+- Automated tests (pytest)
+- CI/CD with GitHub Actions
+- Packaged executable via PyInstaller
 
-- Language: Python and Arduino 
-- Arduino: To program the ESP32
-- Python: To perform automation and connect to Firebase real-time database
+---
 
-# How It Was Made
+## Architecture Overview
 
-- The hardware was made by connecting an ESP32 to buttons through a breadboard
-- The ESP32 sends messages on which button is pressed through Bluetooth Low Energy (BLE) and a desktop Python script detects it to perform the keyboard shortcut.
+### Input Layer
+User presses a physical button connected to the ESP32.
 
-# Architecture Overview:
+### Communication Layer
+ESP32 sends button event over Bluetooth Low Energy (BLE).
 
-**Input Layer**
-  - User presses a button and the ESP32 sends a message through BLE to the Python script
+### Processing Layer
+Python desktop app receives BLE notification asynchronously.
 
-**Processing Layer**
-- The Python script receives the BLE message and reads it to determine which button was pressed
+### Mapping Layer
+Button ID is mapped to shortcut action from JSON config.
 
-**Command Layer**
-- The script maps buttons to keyboard shortcuts in a JSON file.
+### Execution Layer
+The application executes the mapped keyboard shortcut.
 
-**Execution Layer**
-- The script executes the respective keyboard shortcut
+---
 
-# Design Decisions
+## Design Decisions
 
-- Using a Python script instead of implementing everything in Arduino allows more customization and keeps the firmware simple
-- Event-driven input was used instead of polling to reduce unnecessary CPU usage
-- Macro mappings are stored in JSON to allow easy updates without code changes
-- Asynchronous BLE handling and separate threads are used to keep the application responsive.
+- **Desktop-side processing** keeps firmware lightweight and flexible.
+- **BLE over classic Bluetooth** for lower energy and simplicity.
+- **JSON-based configuration** for dynamic updates.
+- **Asynchronous BLE handling** to prevent UI blocking.
+- **CI/CD integration** ensures stable builds and test validation.
+- **Separation of concerns** between BLE, UI, and config modules.
 
-# Limitations
+---
 
-- Can only do keyboard shortcuts
-- Adding a new profile and adding buttons requires modifying the JSON file directly
-- BLE connectivity can be affected by environmental factors such as distance
+## Tech Stack
 
-# Future Improvements
+### Firmware
+- ESP32
+- Arduino framework
+- BLE
 
-- Create a GUI to allow users to modify profiles and buttons
-- Expand on automation actions the script can perform
+### Desktop Application
+- Python
+- CustomTkinter
+- Bleak (BLE client)
+- PyAutoGUI
+
+### Cloud & DevOps
+- Firebase RTDB
+- GitHub Actions
+- pytest
+- PyInstaller
+
+---
+
+## Setup
+
+### Requirements
+- ESP32 flashed with firmware
+
+### Steps
+1. Download the repository
+2. Build the hardware based on design in doc folder
+3. Flash ESP32 on Arduino using the ino file in custom_keyboard folder
+4. Go to dist folder and run the executable
