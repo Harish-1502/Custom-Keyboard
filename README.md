@@ -82,3 +82,11 @@ The application executes the mapped keyboard shortcut.
 2. Build the hardware based on design in doc folder
 3. Flash ESP32 on Arduino using the ino file in custom_keyboard folder
 4. Go to dist folder and run the executable
+
+---
+
+## Demo
+
+
+https://github.com/user-attachments/assets/2eda6e51-4202-49ae-8b1c-037c72e4c95a
+
