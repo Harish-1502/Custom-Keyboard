@@ -1,13 +1,19 @@
 import asyncio
+from email.mime import message
 import webbrowser
 from desktop.cloud.rtdb_client import set_active_profile
 from desktop.ui.gui_host import GuiHost
 # from firebase_admin import db
-from desktop.core.paths import CONFIG_PATH
+from desktop.core.paths import get_config_path
 import json
 import os
 import desktop.cloud.cloud as cloud
+import requests
+import dotenv
 
+dotenv.load_dotenv()
+
+URL = os.getenv("DATABASE_URL")
 class AppController:
     def __init__(
         self,
@@ -20,6 +26,7 @@ class AppController:
         start_ble_session,
         stop_ble_session,
         full_reload_from_db,
+        connecting_to_db,
         array_index
     ):
         self.LOOP = loop
@@ -31,9 +38,40 @@ class AppController:
         self.start_ble_session = start_ble_session
         self.stop_ble_session = stop_ble_session
         self.full_reload_from_db = full_reload_from_db
+        self.connecting_to_db = connecting_to_db
         self.array_index = array_index
-        self._gui = GuiHost(self.FILE_LOCK, self.state)
+        self._gui = GuiHost(self.FILE_LOCK, self.state, self)
+        self.icon = None
+        self.cloud_sync = None
 
+    def set_icon(self, icon):
+        self.icon = icon
+        self.apply_tray_title()
+    
+    def refresh_json(self, file_lock):
+        self.notify("Refreshing config from database...")
+        try:
+            self.full_reload_from_db(file_lock)
+            self.notify("Config refreshed from database.")
+        except requests.exceptions.RequestException as e:
+            self.notify(f"Network error during refresh: {e}") 
+        except Exception as e:
+            self.notify(f"Failed to refresh config: {e}")
+
+    def apply_tray_title(self):
+        if not self.icon:
+            return
+        status = "Connected" if self.state.get("connected") else "Disconnected"
+        self.icon.title = f"Custom Keyboard - {status}"
+
+    def notify(self, message: str, title: str = "Custom Keyboard"):
+        print("NOTIFY:", message)
+        if self.icon:
+            self.apply_tray_title()   # <-- correct name
+            try:
+                self.icon.notify(message, title)
+            except Exception as e:
+                print("Tray notify failed:", e)
 
     # Kills everything
     def exit_app(self, icon):
@@ -46,33 +84,61 @@ class AppController:
     def tray_connect(self, *_):
         # called from tray thread → schedule work on asyncio loop
         print("Connecting to device")
-        self.LOOP.call_soon_threadsafe(lambda: self.start_ble_session(self.name, self.FILE_LOCK, self.state, self.LOOP))
+        self.LOOP.call_soon_threadsafe(lambda: self.start_ble_session(self.name, self.FILE_LOCK, self.state, self.LOOP, on_connected=self.on_ble_connected, on_disconnected=self.on_ble_disconnected, on_error=self.on_ble_error))
 
     # Used in pystray menu to disconnect
     def tray_disconnect(self, *_):
         print("Disconnecting from the device")
         self.LOOP.call_soon_threadsafe(self.stop_ble_session)
 
+    def tray_sign_in(self, *_):
+    # Don’t block the tray thread; schedule onto asyncio loop
+        self.LOOP.call_soon_threadsafe(lambda: self.LOOP.create_task(self._async_cloud_connect()))
+    
+    async def _async_cloud_connect(self):
+        self.notify("Signing in to cloud...")
+
+        try:
+            ok = await asyncio.to_thread(self.connecting_to_db, self.FILE_LOCK)
+
+            if ok:
+                self.notify("Cloud sign-in successful ✅")
+            else:
+                self.notify("Cloud sign-in failed or was cancelled ❌")
+
+        except Exception as e:
+            self.notify(f"Cloud sign-in crashed: {e}")
+
     # Goes to the database website
     def open_website(self, icon, item):
-        webbrowser.open("https://macro-controller-default-rtdb.firebaseio.com/")
+        webbrowser.open(URL)
         
     # Changes the active profile in the local json file    
     def set_state(self, new_profile: str):
         with self.FILE_LOCK:
             try:
-                with CONFIG_PATH.open("r", encoding="utf-8") as f:
+                with get_config_path().open("r", encoding="utf-8") as f:
                     data = json.load(f)
             except FileNotFoundError:
                 data = {}
         
             data["activeProfile"] = new_profile
             
-            with CONFIG_PATH.open("w", encoding="utf-8") as f:
+            with get_config_path().open("w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2)
         
-        # self.db.reference("/").update({f"activeProfile": new_profile})
-        set_active_profile(cloud.cloud_sync.rtdb, cloud.cloud_sync.uid, cloud.cloud_sync.id_token, new_profile)
+        # Only update cloud if connected
+        try:
+            if cloud.cloud_sync and getattr(cloud.cloud_sync, "rtdb", None):
+                set_active_profile(
+                    cloud.cloud_sync.rtdb,
+                    cloud.cloud_sync.uid,
+                    cloud.cloud_sync.id_token,
+                    new_profile
+                )
+        except Exception as e:
+            # Don't crash the app if cloud update fails
+            print("Cloud activeProfile update failed:", e)
 
     # Used to change the active profile 
     def change_profile(self, step):
@@ -92,3 +158,16 @@ class AppController:
 
     def open_gui(self):
         self._gui.open_config()
+
+# -------- Professional BLE event handlers --------
+    def on_ble_connected(self):
+        self.state["connected"] = True
+        self.notify("Device connected")
+
+    def on_ble_disconnected(self):
+        self.state["connected"] = False
+        self.notify("Device disconnected")
+
+    def on_ble_error(self, err: str):
+        self.state["connected"] = False
+        self.notify(f"BLE error: {err}")

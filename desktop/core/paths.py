@@ -1,11 +1,40 @@
+import sys
+import os
 from pathlib import Path
 
-CORE_DIR = Path(__file__).resolve().parent          # .../desktop/core
-DESKTOP_DIR = CORE_DIR.parent                       # .../desktop
-ROOT_DIR = DESKTOP_DIR.parent                       # repo root
+from desktop.cloud.auth_client import appdata_dir
 
-CONFIG_DIR = DESKTOP_DIR / "config"
-CONFIG_PATH = CONFIG_DIR / "buttonControls.json"
-DEFAULT_CONFIG_PATH = CONFIG_DIR / "default_config.json"
+# APP_NAME = "CustomKeyboard"
 
-ASSETS_PATH = ROOT_DIR / "assets" / "controller.png"
+# --------------------------------------------------
+# Base path (works in dev + PyInstaller)
+# --------------------------------------------------
+
+def base_path() -> Path:
+    if getattr(sys, "frozen", False):
+        return Path(sys._MEIPASS)
+    return Path(__file__).resolve().parent.parent
+
+# --------------------------------------------------
+# Bundled assets (read-only)
+# --------------------------------------------------
+
+def get_default_config_path() -> Path:
+    return base_path() / "config" / "default_config.json"
+
+def get_assets_path() -> Path:
+    return base_path() / "assets" / "controller.png"
+
+# --------------------------------------------------
+# User data (writable)
+# --------------------------------------------------
+
+def get_config_path() -> Path:
+    return appdata_dir() / "buttonControls.json"
+
+# DEBUGGING: Print paths to verify correctness
+# print("Config path:", get_config_path())
+# print("Default config path:", get_default_config_path())
+# print("Assets path:", get_assets_path())
+# print("Base path:", base_path())
+# print("Config path exists?", get_config_path().exists())

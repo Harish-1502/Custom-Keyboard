@@ -2,9 +2,13 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+from tkinter import messagebox
 from typing import Optional, Dict, Any
+import tkinter as tk
 
 import requests
+
+from desktop.ui.login_dialog import prompt_credentials_threadsafe
 
 FIREBASE_AUTH_BASE = "https://identitytoolkit.googleapis.com/v1"
 FIREBASE_SECURETOKEN_BASE = "https://securetoken.googleapis.com/v1"
@@ -12,7 +16,7 @@ FIREBASE_SECURETOKEN_BASE = "https://securetoken.googleapis.com/v1"
 def appdata_dir() -> Path:
     # Windows AppData location or fallback to home directory
     base = os.getenv("APPDATA") or str(Path.home())
-    p = Path(base) / "MacroController"
+    p = Path(base) / "CustomKeyboard"
     p.mkdir(parents=True, exist_ok=True)
     return p
 
@@ -22,12 +26,12 @@ def auth_cache_path() -> Path:
 def load_auth_cache() -> Optional[Dict[str, Any]]:
     p = auth_cache_path()
     if not p.exists():
-        return {}
+        return None
     try:
         return json.loads(p.read_text(encoding="utf-8"))
     except Exception as e:
         print("Failed to load auth cache:", e)
-        return {}
+        return None
     
 def save_auth_cache(data: Dict[str, Any]) -> None:
     p = auth_cache_path()
@@ -69,38 +73,58 @@ class FirebaseAuthClient:
         
         if response.status_code >= 400:
             # Firebase returns errors like {"error":{"message":"EMAIL_NOT_FOUND"}}
-            msg = data.get("error", {}).get("message", f"HTTP_{r.status_code}")
+            msg = data.get("error", {}).get("message", f"HTTP_{response.status_code}")
             raise RuntimeError(f"Firebase Auth error: {msg}")
         return data
     
 def ensure_logged_in(api_key:str) -> Dict[str, Any]:
+
+    print("Checking authentication status...")
+    
     cache = load_auth_cache()
+    print("Auth cache loaded:", "Yes" if cache else "No")
+
     client = FirebaseAuthClient(api_key)
+    print("FirebaseAuthClient initialized.")
 
-    if cache.get("refreshToken"):
-        try:
-            refreshed = client.refresh_id_token(cache["refreshToken"])
-            cache["idToken"] = refreshed["id_token"]
-            cache["refreshToken"] = refreshed["refresh_token"]
-            cache["uid"] = refreshed["user_id"]
-            save_auth_cache(cache)
-            return cache
-        except Exception as e:
-            pass  # Failed to refresh, will need to sign in again
+    if(cache is None):
+        print("Cache not found. Please login.")
+        creds = prompt_credentials_threadsafe("CustomKeyboard")
+        if not creds:
+            return None
+        email, password = creds
+    else:
+        # client = FirebaseAuthClient(api_key)
+        if cache.get("refreshToken"):
+            try:
+                refreshed = client.refresh_token(cache["refreshToken"])
+                cache["idToken"] = refreshed["id_token"]
+                cache["refreshToken"] = refreshed["refresh_token"]
+                cache["uid"] = refreshed["user_id"]
+                save_auth_cache(cache)
+                return cache
+            except Exception as e:
+                pass  # Failed to refresh, will need to sign in again
 
-    print("Login required. Please sign in with your email and password.")
-    email = input("Email: ").strip()
-    password = input("Password: ").strip()
+        print("Login required. Please sign in with your email and password.")
+        # email = input("Email: ").strip()
+        # password = input("Password: ").strip()
+        creds = prompt_credentials_threadsafe("CustomKeyboard")
+        if not creds:
+            return None
+        email, password = creds
 
     try:
         signed_result = client.sign_in(email, password)
     except Exception as e:
-        print("Sign in failed:", e)
-        choice = input("Do you want to sign up with these credentials? (y/n): ").strip().lower()
-        if choice == "y":
-            signed_result = client.sign_up(email, password)
+        if ask_signup(str(e)):
+            try:
+                signed_result = client.sign_up(email, password)
+            except Exception as e2:
+                # signup failed -> treat as non-fatal too
+                return None
         else:
-            raise RuntimeError("Authentication failed and user declined to sign up.")
+            return None
         
     # After successful sign in or sign up, save tokens
     cache = {
@@ -111,6 +135,17 @@ def ensure_logged_in(api_key:str) -> Dict[str, Any]:
     }
     save_auth_cache(cache)
     return cache
+
+def ask_signup(err_msg: str) -> bool:
+    root = tk.Tk()
+    root.withdraw()
+    try:
+        return messagebox.askyesno(
+            title="Sign in failed",
+            message=f"Sign in failed:\n{err_msg}\n\nDo you want to create an account with these credentials?"
+        )
+    finally:
+        root.destroy()
 
 def get_session_silent(api_key: str) -> Dict[str, Any] | None:
     """
@@ -123,7 +158,7 @@ def get_session_silent(api_key: str) -> Dict[str, Any] | None:
 
     client = FirebaseAuthClient(api_key)
     try:
-        refreshed = client.refresh_id_token(cache["refreshToken"])
+        refreshed = client.refresh_token(cache["refreshToken"])
         cache["idToken"] = refreshed["id_token"]
         cache["refreshToken"] = refreshed["refresh_token"]
         cache["uid"] = refreshed["user_id"]

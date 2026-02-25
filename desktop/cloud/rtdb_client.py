@@ -57,7 +57,7 @@ def seed_if_missing(
     return existing
 
 
-def get_user_config(rtdb: RTDBClient, uid: str, id_token: str) -> Dict[str, Any]:
+def get_user_config(rtdb: RTDBClient, id_token: str, uid: str) -> Dict[str, Any]:
     data = rtdb.get(f"users/{uid}", id_token)
 
     if data is None:
